@@ -6,6 +6,8 @@ import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game
 import { COUNTRIES } from '../data/countries';
 import GameHUD from '../components/GameHUD';
 import GameOverModal from '../components/GameOverModal';
+import GothicLogo from '../components/GothicLogo';
+import ArtDecoFrame, { ArtDecoCorner } from '../components/ArtDecoFrame';
 import { Play, Compass, Globe2, ShieldCheck, Zap, ArrowDown, ChevronRight, Globe, MapPin } from 'lucide-react';
 
 // Dynamic import for 3D Globe components to prevent SSR issues
@@ -298,14 +300,19 @@ export default function EarthleHome() {
 
           {/* SECTION 1: HERO VIEW (Initial Load) */}
           <section className="relative z-10 min-h-screen flex flex-col justify-between pt-3 md:pt-4 px-6 md:px-12 pb-6 md:pb-12 pointer-events-none">
-            {/* Top Bar (Matches Rainmaker top header) */}
+            {/* Top Bar (Matches Rainmaker top header with Gothic E lettermark) */}
             <header className="w-full grid grid-cols-3 items-center pointer-events-auto">
-              {/* Left indicator */}
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#e5ff42] animate-pulse" />
-                <span className="hidden sm:inline text-xs uppercase font-bold tracking-widest text-[#f5f5f1]/80">
-                  Precision Geography
-                </span>
+              {/* Left indicator with Gothic "E" Logo */}
+              <div className="flex items-center gap-3">
+                <GothicLogo size={36} className="text-[#f5f5f1] hover:text-[#e5ff42] cursor-pointer" />
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#e5ff42] font-semibold">
+                    Cartography // 01
+                  </span>
+                  <span className="text-[11px] font-sans tracking-wide text-[#628c7d]">
+                    Spatial Memory Atlas
+                  </span>
+                </div>
               </div>
 
               {/* Center Brand Title in same style as Rainmaker */}
@@ -319,9 +326,9 @@ export default function EarthleHome() {
               <div className="flex justify-end">
                 <button
                   onClick={() => startGame()}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#e5ff42] text-[#1c2c26] text-xs md:text-sm font-bold tracking-wide hover:bg-[#d4ee38] transition-all shadow-lg hover:scale-105"
+                  className="px-6 py-2.5 bg-[#e5ff42] text-[#1c2c26] text-xs font-bold uppercase tracking-wider hover:bg-[#d4ee38] transition-all flex items-center gap-2 shadow-lg hover:scale-105"
                 >
-                  <Play className="w-4 h-4 fill-current" />
+                  <Play className="w-3.5 h-3.5 fill-current" />
                   <span>Quick Run</span>
                 </button>
               </div>
@@ -340,11 +347,11 @@ export default function EarthleHome() {
                 distance guessing—pure spatial visual recall.
               </p>
 
-              {/* Dual CTAs */}
+              {/* Dual CTAs (Architectural / Sharp) */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
                   onClick={() => startGame()}
-                  className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#e5ff42] text-[#1c2c26] text-sm font-extrabold tracking-wide hover:bg-[#d4ee38] shadow-2xl transition-all hover:scale-105 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-8 py-4 bg-[#e5ff42] text-[#1c2c26] text-xs md:text-sm font-extrabold uppercase tracking-widest hover:bg-[#d4ee38] shadow-2xl transition-all hover:scale-105 flex items-center justify-center gap-2"
                 >
                   <Play className="w-4 h-4 fill-current" />
                   <span>Start Quiz (15m Sprint)</span>
@@ -357,7 +364,7 @@ export default function EarthleHome() {
                       behavior: 'smooth',
                     });
                   }}
-                  className="w-full sm:w-auto px-6 py-4 rounded-full glass-panel-interactive text-sm font-semibold text-[#f5f5f1] flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-7 py-4 bg-[#13201b]/80 border border-[#275f4b] hover:border-[#e5ff42] text-xs md:text-sm font-bold uppercase tracking-wider text-[#f5f5f1] hover:text-[#e5ff42] transition-all flex items-center justify-center gap-2 backdrop-blur-md"
                 >
                   <span>Explore Modes</span>
                   <ArrowDown className="w-4 h-4 text-[#628c7d]" />
@@ -376,127 +383,135 @@ export default function EarthleHome() {
             {/* Inner Content Constrained to max-w-6xl for optimal readability */}
             <div className="w-full max-w-6xl mx-auto px-6 md:px-12 flex flex-col justify-between my-auto">
               {/* Mode Cards Header */}
-              <div className="text-center mb-8">
-                <span className="text-xs uppercase font-bold tracking-widest text-[#e5ff42]">
-                  Custom Expedition
+              <div className="text-center mb-10">
+                <span className="text-xs font-mono uppercase tracking-[0.25em] text-[#e5ff42] font-semibold">
+                  // 02 CONFIGURATION
                 </span>
                 <h2 className="font-serif italic text-4xl md:text-5xl text-[#f5f5f1] mt-1">
                   Choose Your Game Style
                 </h2>
               </div>
 
-              {/* Mode Configuration Grid */}
+              {/* Mode Configuration Grid: Architectural Art Deco Frames */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 my-auto">
-                {/* Card 1: Quiz Objective (Countries vs Capitals) */}
-                <div className="glass-panel p-6 rounded-3xl border border-[#275f4b]/50 flex flex-col justify-between shadow-xl">
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-wider text-[#628c7d]">
-                      01 / Objective
-                    </span>
-                    <h3 className="text-xl font-bold text-[#f5f5f1] mt-1 mb-2">Quiz Target</h3>
-                    <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-4">
-                      Choose whether you identify country names or their official capital cities.
+                {/* Card 1: Quiz Target */}
+                <ArtDecoFrame
+                  badge="01 // TARGET OBJECTIVE"
+                  cornerSize={44}
+                  cornerColor="text-[#e5ff42]"
+                  className="p-6 flex flex-col justify-between shadow-2xl"
+                >
+                  <div className="pt-2">
+                    <h3 className="text-2xl font-serif italic text-[#f5f5f1] mb-2">Quiz Target</h3>
+                    <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-6 font-light">
+                      Choose whether you identify country names or their official sovereign capital cities.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 bg-[#13201b]/60 p-1.5 rounded-2xl border border-[#275f4b]/40">
+                  <div className="grid grid-cols-2 gap-2 bg-[#0e1814]/90 p-1 border border-[#275f4b]/60">
                     <button
                       onClick={() => setSettings((s) => ({ ...s, mode: 'countries' }))}
-                      className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      className={`py-3 text-xs font-mono uppercase tracking-wider font-bold transition-all ${
                         settings.mode === 'countries'
                           ? 'bg-[#e5ff42] text-[#1c2c26]'
-                          : 'text-[#f5f5f1]/70 hover:text-white'
+                          : 'text-[#f5f5f1]/70 hover:text-white hover:bg-[#1c2c26]'
                       }`}
                     >
                       Country Names
                     </button>
                     <button
                       onClick={() => setSettings((s) => ({ ...s, mode: 'capitals' }))}
-                      className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      className={`py-3 text-xs font-mono uppercase tracking-wider font-bold transition-all ${
                         settings.mode === 'capitals'
                           ? 'bg-[#e5ff42] text-[#1c2c26]'
-                          : 'text-[#f5f5f1]/70 hover:text-white'
+                          : 'text-[#f5f5f1]/70 hover:text-white hover:bg-[#1c2c26]'
                       }`}
                     >
                       Capitals
                     </button>
                   </div>
-                </div>
+                </ArtDecoFrame>
 
-                {/* Card 2: Input Method (Type vs MCQ) */}
-                <div className="glass-panel p-6 rounded-3xl border border-[#275f4b]/50 flex flex-col justify-between shadow-xl">
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-wider text-[#628c7d]">
-                      02 / Input Method
-                    </span>
-                    <h3 className="text-xl font-bold text-[#f5f5f1] mt-1 mb-2">Input Mechanic</h3>
-                    <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-4">
-                      Type-in offers pure recall with autosuggest. MCQ gives 4 high-speed cards (1-4 keys).
+                {/* Card 2: Input Mechanic */}
+                <ArtDecoFrame
+                  badge="02 // INPUT MECHANIC"
+                  cornerSize={44}
+                  cornerColor="text-[#e5ff42]"
+                  className="p-6 flex flex-col justify-between shadow-2xl"
+                >
+                  <div className="pt-2">
+                    <h3 className="text-2xl font-serif italic text-[#f5f5f1] mb-2">Input Mechanic</h3>
+                    <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-6 font-light">
+                      Type-in demands pure spatial memory without clues. MCQ provides 4 rapid-fire cards (Keys 1-4).
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 bg-[#13201b]/60 p-1.5 rounded-2xl border border-[#275f4b]/40">
+                  <div className="grid grid-cols-2 gap-2 bg-[#0e1814]/90 p-1 border border-[#275f4b]/60">
                     <button
                       onClick={() => setSettings((s) => ({ ...s, inputType: 'mcq' }))}
-                      className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      className={`py-3 text-xs font-mono uppercase tracking-wider font-bold transition-all ${
                         settings.inputType === 'mcq'
                           ? 'bg-[#e5ff42] text-[#1c2c26]'
-                          : 'text-[#f5f5f1]/70 hover:text-white'
+                          : 'text-[#f5f5f1]/70 hover:text-white hover:bg-[#1c2c26]'
                       }`}
                     >
                       Multiple Choice (4)
                     </button>
                     <button
                       onClick={() => setSettings((s) => ({ ...s, inputType: 'type' }))}
-                      className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      className={`py-3 text-xs font-mono uppercase tracking-wider font-bold transition-all ${
                         settings.inputType === 'type'
                           ? 'bg-[#e5ff42] text-[#1c2c26]'
-                          : 'text-[#f5f5f1]/70 hover:text-white'
+                          : 'text-[#f5f5f1]/70 hover:text-white hover:bg-[#1c2c26]'
                       }`}
                     >
                       Type-In
                     </button>
                   </div>
-                </div>
+                </ArtDecoFrame>
 
-                {/* Card 3: Region Filter */}
-                <div className="glass-panel p-6 rounded-3xl border border-[#275f4b]/50 flex flex-col justify-between shadow-xl">
-                  <div>
-                    <span className="text-xs font-mono uppercase tracking-wider text-[#628c7d]">
-                      03 / Territory
-                    </span>
-                    <h3 className="text-xl font-bold text-[#f5f5f1] mt-1 mb-2">Region Focus</h3>
-                    <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-4">
-                      Focus on specific continents or challenge all 177 sovereign nations globally.
+                {/* Card 3: Region Focus */}
+                <ArtDecoFrame
+                  badge="03 // TERRITORY SCOPE"
+                  cornerSize={44}
+                  cornerColor="text-[#e5ff42]"
+                  className="p-6 flex flex-col justify-between shadow-2xl"
+                >
+                  <div className="pt-2">
+                    <h3 className="text-2xl font-serif italic text-[#f5f5f1] mb-2">Territory Scope</h3>
+                    <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-6 font-light">
+                      Focus on specific continental landmasses or challenge all 177 sovereign nations globally.
                     </p>
                   </div>
 
-                  <select
-                    value={settings.continent}
-                    onChange={(e) => setSettings((s) => ({ ...s, continent: e.target.value }))}
-                    className="w-full bg-[#13201b]/80 border border-[#275f4b]/50 rounded-2xl px-4 py-3 text-xs font-bold text-[#f5f5f1] focus:outline-none focus:border-[#e5ff42]/60"
-                  >
-                    <option value="all">Entire World (177 Countries)</option>
-                    <option value="Europe">Europe</option>
-                    <option value="Asia">Asia</option>
-                    <option value="Africa">Africa</option>
-                    <option value="Americas">Americas</option>
-                    <option value="Oceania">Oceania</option>
-                  </select>
-                </div>
+                  <div className="relative">
+                    <select
+                      value={settings.continent}
+                      onChange={(e) => setSettings((s) => ({ ...s, continent: e.target.value }))}
+                      className="w-full bg-[#0e1814]/90 border border-[#275f4b]/60 px-4 py-3 text-xs font-mono uppercase tracking-wider font-bold text-[#f5f5f1] focus:outline-none focus:border-[#e5ff42]"
+                    >
+                      <option value="all">Entire World (177 Countries)</option>
+                      <option value="Europe">Europe</option>
+                      <option value="Asia">Asia</option>
+                      <option value="Africa">Africa</option>
+                      <option value="Americas">Americas</option>
+                      <option value="Oceania">Oceania</option>
+                    </select>
+                  </div>
+                </ArtDecoFrame>
               </div>
 
               {/* Launch Expedition CTA */}
-              <div className="w-full flex flex-col items-center gap-3 mt-8 mb-6">
+              <div className="w-full flex flex-col items-center gap-3 mt-10 mb-6">
                 <button
                   onClick={() => startGame()}
-                  className="w-full max-w-md py-4 rounded-full bg-[#e5ff42] text-[#1c2c26] font-extrabold text-base tracking-wide hover:bg-[#d4ee38] shadow-2xl transition-all hover:scale-105 flex items-center justify-center gap-2"
+                  className="w-full max-w-md py-4 bg-[#e5ff42] text-[#1c2c26] font-extrabold text-sm uppercase tracking-widest hover:bg-[#d4ee38] shadow-2xl transition-all hover:scale-105 flex items-center justify-center gap-2 group"
                 >
                   <span>Launch Custom Expedition</span>
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
-                <p className="text-xs text-[#628c7d]">
-                  15:00 Timer • {availableCountries.length} Target Countries • Instant Spatial Feedback
+                <p className="text-xs font-mono tracking-wider text-[#628c7d]">
+                  15:00 TIMER • {availableCountries.length} TARGET COUNTRIES • INSTANT SPATIAL FEEDBACK
                 </p>
               </div>
             </div>
