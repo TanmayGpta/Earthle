@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
 import { COUNTRIES } from '../data/countries';
-import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, ChevronRight, MapPin } from 'lucide-react';
 
 interface GameHUDProps {
   settings: GameSettings;
   targetCountry: Country;
+  revealedCountry: Country | null;
   answers: Record<string, AnswerRecord>;
   streak: number;
   timeLeft: number;
@@ -17,12 +18,14 @@ interface GameHUDProps {
   onSubmitAnswer: (input: string) => void;
   onSkip: () => void;
   onReveal: () => void;
+  onConfirmNext: () => void;
   onExit: () => void;
 }
 
 export default function GameHUD({
   settings,
   targetCountry,
+  revealedCountry,
   answers,
   streak,
   timeLeft,
@@ -32,10 +35,10 @@ export default function GameHUD({
   onSubmitAnswer,
   onSkip,
   onReveal,
+  onConfirmNext,
   onExit,
 }: GameHUDProps) {
   const [typedInput, setTypedInput] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'wrong' | 'reveal'; message: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,46 +70,26 @@ export default function GameHUD({
     setMcqOptions(options);
   }, [targetCountry, settings.mode, settings.inputType]);
 
-  // Autocomplete / suggestions for Type mode
-  useEffect(() => {
-    if (settings.inputType !== 'type') return;
-
-    if (!typedInput.trim()) {
-      setSuggestions([]);
-      return;
-    }
-
-    const query = typedInput.toLowerCase().trim();
-    const isCapital = settings.mode === 'capitals';
-
-    const matches = COUNTRIES.filter((c) => {
-      if (isCapital) {
-        return c.capital.toLowerCase().includes(query);
-      } else {
-        return (
-          c.name.toLowerCase().includes(query) ||
-          c.aliases.some((a) => a.toLowerCase().includes(query))
-        );
-      }
-    })
-      .slice(0, 5)
-      .map((c) => (isCapital ? c.capital : c.name));
-
-    // Deduplicate suggestions
-    setSuggestions(Array.from(new Set(matches)));
-  }, [typedInput, settings.mode, settings.inputType]);
-
   // Focus input automatically
   useEffect(() => {
-    if (settings.inputType === 'type' && inputRef.current) {
+    if (!revealedCountry && settings.inputType === 'type' && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [targetCountry, settings.inputType]);
+  }, [targetCountry, revealedCountry, settings.inputType]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is actively typing in input box
+      // If a country answer is currently revealed, Enter or Space advances
+      if (revealedCountry) {
+        if (e.key === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          onConfirmNext();
+        }
+        return;
+      }
+
+      // If typing in input box
       if (document.activeElement === inputRef.current && settings.inputType === 'type') {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -134,7 +117,7 @@ export default function GameHUD({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mcqOptions, typedInput, settings.inputType]);
+  }, [mcqOptions, typedInput, settings.inputType, revealedCountry]);
 
   const handleTypeSubmit = (answer: string) => {
     const isCapital = settings.mode === 'capitals';
@@ -151,7 +134,6 @@ export default function GameHUD({
       setTimeout(() => setFeedback(null), 1200);
       onSubmitAnswer(answer);
       setTypedInput('');
-      setSuggestions([]);
     } else {
       setFeedback({ type: 'wrong', message: `✕ Not quite, try again or skip!` });
       setTimeout(() => setFeedback(null), 1200);
@@ -173,7 +155,7 @@ export default function GameHUD({
       });
       setTimeout(() => {
         setFeedback(null);
-        onSubmitAnswer(choice); // Fail moves to next as per user requirement
+        onSubmitAnswer(choice); // Fail moves to next
       }, 1400);
     }
   };
@@ -265,138 +247,185 @@ export default function GameHUD({
       )}
 
       {/* Answered Country Hover Card (Atlas Exploration) */}
-      {hoveredCountry && (
-        <div className="pointer-events-none absolute top-20 left-6 max-w-xs glass-panel p-3.5 rounded-2xl shadow-2xl border border-white/20 animate-in fade-in duration-150">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">{hoveredCountry.flag}</span>
-            <div>
-              <p className="text-sm font-bold text-[#f5f5f1]">{hoveredCountry.name}</p>
-              <p className="text-xs text-[#628c7d]">Capital: <span className="text-[#f5f5f1]">{hoveredCountry.capital}</span></p>
+      {hoveredCountry && (() => {
+        const record = answers[hoveredCountry.code];
+        const status = record?.status || 'correct';
+        const isCorrect = status === 'correct';
+        const isRevealed = status === 'revealed';
+
+        const borderColor = isCorrect
+          ? 'border-[#10b981]/50'
+          : isRevealed
+          ? 'border-[#f87171]/50'
+          : 'border-[#fb923c]/50';
+
+        const badgeColor = isCorrect
+          ? 'text-[#10b981]'
+          : isRevealed
+          ? 'text-[#f87171]'
+          : 'text-[#fb923c]';
+
+        const badgeLabel = isCorrect
+          ? 'Guessed Correctly'
+          : isRevealed
+          ? 'Answer Revealed'
+          : 'Skipped';
+
+        return (
+          <div className={`pointer-events-none absolute top-20 left-6 max-w-xs glass-panel p-4 rounded-2xl shadow-2xl border ${borderColor} animate-in fade-in duration-150 z-30`}>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{hoveredCountry.flag}</span>
+              <div>
+                <p className="text-sm font-bold text-[#f5f5f1]">{hoveredCountry.name}</p>
+                <p className="text-xs text-[#628c7d]">Capital: <span className="text-[#f5f5f1] font-semibold">{hoveredCountry.capital}</span></p>
+              </div>
+            </div>
+            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-[#f5f5f1]/70">
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-[#628c7d]" />
+                {hoveredCountry.continent}
+              </span>
+              <span className={`${badgeColor} font-semibold flex items-center gap-1`}>
+                {isCorrect ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : isRevealed ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <SkipForward className="w-3.5 h-3.5" />
+                )}
+                {badgeLabel}
+              </span>
             </div>
           </div>
-          <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-[#f5f5f1]/60">
-            <span>Continent: {hoveredCountry.continent}</span>
-            <span className="text-[#10b981] font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Mastered
-            </span>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* Center Target Notification & Feedback */}
-      <div className="w-full flex flex-col items-center justify-center my-auto">
-        {feedback && (
+      {/* Center Target Notification, Feedback & Reveal Modal */}
+      <div className="w-full flex flex-col items-center justify-center my-auto px-4">
+        {/* Answer Revealed Card (When user clicks "What's the answer?") */}
+        {revealedCountry ? (
+          <div className="pointer-events-auto max-w-md w-full glass-panel p-6 rounded-3xl border border-[#e5ff42]/50 shadow-2xl animate-in zoom-in-95 duration-200 text-center my-auto backdrop-blur-2xl">
+            <span className="text-5xl mb-2 block">{revealedCountry.flag}</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-[#e5ff42] font-bold">
+              Target Revealed
+            </span>
+            <h3 className="text-3xl font-serif font-bold text-[#f5f5f1] mt-1 mb-1">
+              {revealedCountry.name}
+            </h3>
+            <p className="text-sm text-[#628c7d] mb-4">
+              Capital: <span className="text-[#f5f5f1] font-semibold">{revealedCountry.capital}</span> • {revealedCountry.continent}
+            </p>
+            {revealedCountry.trivia && (
+              <p className="text-xs text-[#f5f5f1]/80 italic bg-black/40 p-3 rounded-xl mb-5 border border-white/5 leading-relaxed text-left">
+                💡 <span className="font-semibold text-[#e5ff42]">Note:</span> {revealedCountry.trivia}
+              </p>
+            )}
+            <button
+              onClick={onConfirmNext}
+              className="w-full py-3.5 rounded-xl bg-[#e5ff42] text-[#1c2c26] text-xs font-bold uppercase tracking-wider hover:bg-[#d4ee38] transition-all flex items-center justify-center gap-2 shadow-lg"
+            >
+              <span>Continue to Next Country (Enter / Space)</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        ) : feedback ? (
           <div
             className={`px-6 py-2.5 rounded-full text-sm font-semibold tracking-wide backdrop-blur-md shadow-2xl animate-in zoom-in-95 duration-150 ${
               feedback.type === 'correct'
-                ? 'bg-[#10b981]/90 text-[#070d0b]'
+                ? 'bg-[#10b981]/90 text-[#1c2c26]'
                 : feedback.type === 'wrong'
-                ? 'bg-[#f87171]/90 text-[#070d0b]'
-                : 'bg-[#e5ff42]/90 text-[#070d0b]'
+                ? 'bg-[#f87171]/90 text-[#1c2c26]'
+                : 'bg-[#e5ff42]/90 text-[#1c2c26]'
             }`}
           >
             {feedback.message}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Bottom Action Island */}
-      <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3">
-        {/* Prompt Title */}
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-[#e5ff42] font-semibold mb-1">
-            {settings.mode === 'countries' ? 'Identify Highlighted Territory' : 'Identify Country Capital'}
-          </p>
-          <h2 className="text-lg md:text-xl font-medium text-[#f5f5f1]">
-            {settings.mode === 'countries'
-              ? 'What country is glowing on the globe?'
-              : `What is the capital of ${targetCountry.name}?`}
-          </h2>
-        </div>
+      {/* Bottom Action Island (Hidden when an answer is actively revealed) */}
+      {!revealedCountry && (
+        <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3">
+          {/* Prompt Title */}
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-widest text-[#e5ff42] font-semibold mb-1">
+              {settings.mode === 'countries' ? 'Identify Highlighted Territory' : 'Identify Country Capital'}
+            </p>
+            <h2 className="text-lg md:text-xl font-medium text-[#f5f5f1]">
+              {settings.mode === 'countries'
+                ? 'What country is glowing on the globe?'
+                : `What is the capital of ${targetCountry.name}?`}
+            </h2>
+          </div>
 
-        {/* Dynamic Input: Type vs MCQ */}
-        {settings.inputType === 'type' ? (
-          <div className="w-full relative pointer-events-auto">
-            {/* Input Bar */}
-            <div className="relative flex items-center glass-panel rounded-2xl overflow-hidden p-1.5 focus-within:border-[#e5ff42]/60 focus-within:ring-1 focus-within:ring-[#e5ff42]/40 transition-all">
-              <input
-                ref={inputRef}
-                type="text"
-                value={typedInput}
-                onChange={(e) => setTypedInput(e.target.value)}
-                placeholder={
-                  settings.mode === 'countries'
-                    ? 'Type country name and press Enter...'
-                    : 'Type capital city name and press Enter...'
-                }
-                className="w-full bg-transparent px-4 py-3 text-sm md:text-base text-[#f5f5f1] placeholder-[#f5f5f1]/30 focus:outline-none"
-              />
-              <button
-                onClick={() => typedInput.trim() && handleTypeSubmit(typedInput)}
-                disabled={!typedInput.trim()}
-                className="px-5 py-2.5 rounded-xl bg-[#e5ff42] text-[#070d0b] text-sm font-bold tracking-wide hover:bg-[#d4ee38] disabled:opacity-30 disabled:pointer-events-none transition-all"
-              >
-                Submit
-              </button>
-            </div>
-
-            {/* Autocomplete Dropdown */}
-            {suggestions.length > 0 && (
-              <div className="absolute bottom-full mb-2 left-0 right-0 glass-panel rounded-xl overflow-hidden shadow-2xl border border-white/10 z-20">
-                {suggestions.map((suggestion, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleTypeSubmit(suggestion)}
-                    className="w-full px-4 py-2.5 text-left text-sm text-[#f5f5f1] hover:bg-white/10 flex items-center justify-between transition-colors"
-                  >
-                    <span>{suggestion}</span>
-                    <span className="text-xs text-[#e5ff42] opacity-70">Enter ↵</span>
-                  </button>
-                ))}
+          {/* Dynamic Input: Type vs MCQ */}
+          {settings.inputType === 'type' ? (
+            <div className="w-full relative pointer-events-auto">
+              {/* Input Bar (No dropdown list: pure recall typing!) */}
+              <div className="relative flex items-center glass-panel rounded-2xl overflow-hidden p-1.5 focus-within:border-[#e5ff42]/60 focus-within:ring-1 focus-within:ring-[#e5ff42]/40 transition-all">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={typedInput}
+                  onChange={(e) => setTypedInput(e.target.value)}
+                  placeholder={
+                    settings.mode === 'countries'
+                      ? 'Type country name and press Enter...'
+                      : 'Type capital city name and press Enter...'
+                  }
+                  className="w-full bg-transparent px-4 py-3 text-sm md:text-base text-[#f5f5f1] placeholder-[#f5f5f1]/30 focus:outline-none"
+                />
+                <button
+                  onClick={() => typedInput.trim() && handleTypeSubmit(typedInput)}
+                  disabled={!typedInput.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-[#e5ff42] text-[#1c2c26] text-sm font-bold tracking-wide hover:bg-[#d4ee38] disabled:opacity-30 disabled:pointer-events-none transition-all"
+                >
+                  Submit
+                </button>
               </div>
-            )}
-          </div>
-        ) : (
-          /* MCQ Option Cards */
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 pointer-events-auto">
-            {mcqOptions.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleMcqSelect(option)}
-                className="glass-panel-interactive px-4 py-3 rounded-xl flex items-center justify-between text-left group"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 text-xs font-mono font-bold text-[#e5ff42] flex items-center justify-center group-hover:bg-[#e5ff42] group-hover:text-[#070d0b] transition-all">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm font-semibold text-[#f5f5f1] group-hover:text-white">
-                    {option}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+            </div>
+          ) : (
+            /* MCQ Option Cards */
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 pointer-events-auto">
+              {mcqOptions.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleMcqSelect(option)}
+                  className="glass-panel-interactive px-4 py-3 rounded-xl flex items-center justify-between text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 text-xs font-mono font-bold text-[#e5ff42] flex items-center justify-center group-hover:bg-[#e5ff42] group-hover:text-[#1c2c26] transition-all">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-semibold text-[#f5f5f1] group-hover:text-white">
+                      {option}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* Action Controls: Skip & Reveal */}
-        <div className="flex items-center gap-3 pointer-events-auto pt-1">
-          <button
-            onClick={onSkip}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full glass-panel-interactive text-xs font-medium text-[#f5f5f1]/70 hover:text-[#f5f5f1]"
-          >
-            <SkipForward className="w-3.5 h-3.5" />
-            <span>Skip Country (Space)</span>
-          </button>
+          {/* Action Controls: Skip & Reveal */}
+          <div className="flex items-center gap-3 pointer-events-auto pt-1">
+            <button
+              onClick={onSkip}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full glass-panel-interactive text-xs font-medium text-[#f5f5f1]/70 hover:text-[#f5f5f1]"
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+              <span>Skip Country (Space)</span>
+            </button>
 
-          <button
-            onClick={onReveal}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full glass-panel-interactive text-xs font-medium text-[#f5f5f1]/70 hover:text-[#f87171]"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>What&apos;s the answer?</span>
-          </button>
+            <button
+              onClick={onReveal}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full glass-panel-interactive text-xs font-medium text-[#f5f5f1]/70 hover:text-[#f87171]"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>What&apos;s the answer?</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

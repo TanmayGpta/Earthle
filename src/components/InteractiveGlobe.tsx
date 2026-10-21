@@ -21,6 +21,11 @@ export default function InteractiveGlobe({
 
   // Map of ADM0_A3 -> Country object for fast lookup
   const countryMap = useRef<Map<string, Country>>(new Map());
+  const answersRef = useRef<Record<string, AnswerRecord>>(answers);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
 
   useEffect(() => {
     countryMap.current.clear();
@@ -77,7 +82,7 @@ export default function InteractiveGlobe({
               if (record.status === 'skipped') return '#fb923c'; // Amber
             }
             // 3. Default land
-            return '#182b22';
+            return '#274137';
           })
           .polygonSideColor((feat: any) => {
             const code = feat.properties.ADM0_A3 || feat.properties.ISO_A3;
@@ -85,28 +90,31 @@ export default function InteractiveGlobe({
             const record = answers[code];
             if (record?.status === 'correct') return 'rgba(16, 185, 129, 0.3)';
             if (record?.status === 'revealed') return 'rgba(248, 113, 113, 0.3)';
-            return '#0e1814';
+            return '#1a2c25';
           })
           .polygonStrokeColor((feat: any) => {
             const code = feat.properties.ADM0_A3 || feat.properties.ISO_A3;
             if (targetCountry && code === targetCountry.code) return '#ffffff';
-            return 'rgba(245, 245, 241, 0.2)';
+            return 'rgba(245, 245, 241, 0.25)';
           })
-          .onPolygonHover((feat: any, prevFeat: any) => {
+          .onPolygonHover((feat: any) => {
             if (!feat) {
               onCountryHover(null);
+              if (containerRef.current) containerRef.current.style.cursor = 'grab';
               return;
             }
             const code = feat.properties.ADM0_A3 || feat.properties.ISO_A3;
             // Only allow hover card if the country has already been answered!
-            if (answers[code]) {
+            if (answersRef.current[code]) {
               const country = countryMap.current.get(code);
               if (country) {
                 onCountryHover(country);
+                if (containerRef.current) containerRef.current.style.cursor = 'pointer';
+                return;
               }
-            } else {
-              onCountryHover(null);
             }
+            onCountryHover(null);
+            if (containerRef.current) containerRef.current.style.cursor = 'grab';
           });
 
         const controls = globe.controls();
@@ -166,7 +174,7 @@ export default function InteractiveGlobe({
           if (record.status === 'revealed') return '#f87171';
           if (record.status === 'skipped') return '#fb923c';
         }
-        return '#182b22';
+        return '#274137';
       })
       .polygonSideColor((feat: any) => {
         const code = feat.properties.ADM0_A3 || feat.properties.ISO_A3;
@@ -174,7 +182,7 @@ export default function InteractiveGlobe({
         const record = answers[code];
         if (record?.status === 'correct') return 'rgba(16, 185, 129, 0.3)';
         if (record?.status === 'revealed') return 'rgba(248, 113, 113, 0.3)';
-        return '#0e1814';
+        return '#1a2c25';
       });
   }, [targetCountry, answers]);
 

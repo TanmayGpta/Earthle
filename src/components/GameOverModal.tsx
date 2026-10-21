@@ -124,7 +124,7 @@ export default function GameOverModal({
         <div className="flex flex-col gap-2.5">
           <button
             onClick={onPlayAgain}
-            className="w-full py-3.5 rounded-xl bg-[#e5ff42] text-[#070d0b] font-bold text-sm tracking-wide hover:bg-[#d4ee38] flex items-center justify-center gap-2 transition-all shadow-lg"
+            className="w-full py-3.5 rounded-xl bg-[#e5ff42] text-[#103d1d] font-bold text-sm tracking-wide hover:bg-[#d4ee38] flex items-center justify-center gap-2 transition-all shadow-lg"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Play Again</span>

@@ -41,9 +41,9 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
           .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg') // Dark subtle base
           .polygonsData(geoData.features)
           .polygonAltitude(0.008)
-          .polygonCapColor(() => '#162820') // Deep spruce land
-          .polygonSideColor(() => '#0f1a15')
-          .polygonStrokeColor(() => 'rgba(245, 245, 241, 0.15)'); // Clean bone boundary
+          .polygonCapColor(() => '#274137') // Rainmaker forest land
+          .polygonSideColor(() => '#1a2c25')
+          .polygonStrokeColor(() => 'rgba(245, 245, 241, 0.18)'); // Clean bone boundary // Clean bone boundary
 
         // Auto-rotation
         const controls = globe.controls();
@@ -55,7 +55,7 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
           controls.enableRotate = false; // Passive in hero mode
         }
 
-        globe.pointOfView({ lat: 15, lng: 20, altitude: 2.2 }, 0);
+        globe.pointOfView({ lat: 15, lng: 20, altitude: 1.7 }, 0);
 
         globeInstanceRef.current = globe;
         setDataLoaded(true);
@@ -86,12 +86,23 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
     };
   }, []);
 
-  // Compute interpolated transform based on scroll
-  // At scroll 0: globe is pushed down so only the top crest shows
-  // At scroll 1: globe pulls up to top-center and scales down
-  const translateY = 38 - scrollProgress * 44; // 38% down -> -6% up
-  const scale = 1.35 - scrollProgress * 0.45; // 1.35 scale -> 0.9 scale
-  const opacity = 1 - scrollProgress * 0.15;
+  // Compute multi-stage interpolated transform based on scroll
+  // Stage 1 (0 to 0.5): Globe decreases and lifts up while hero content is in focus
+  // Stage 2 (0.5 to 1.0): Globe remains docked as an elegant header piece while mode cards are browsed
+  let translateY = 32;
+  let scale = 1.6;
+
+  if (scrollProgress <= 0.5) {
+    const p = scrollProgress / 0.5;
+    const ease = 1 - Math.pow(1 - p, 2); // Quadratic ease-out
+    translateY = 32 - ease * 50; // 32% (half-earth) -> -18% (docked)
+    scale = 1.6 - ease * 0.75;   // 1.6 (grand) -> 0.85 (docked)
+  } else {
+    const p = (scrollProgress - 0.5) / 0.5;
+    translateY = -18 - p * 3;     // -18% -> -21%
+    scale = 0.85 - p * 0.05;      // 0.85 -> 0.80
+  }
+  const opacity = 1 - scrollProgress * 0.08;
 
   return (
     <div
@@ -103,7 +114,7 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
     >
       <div
         ref={containerRef}
-        className="w-[100vw] h-[100vh] max-w-[1200px] max-h-[1200px] flex items-center justify-center"
+        className="w-[100vw] h-[100vh] flex items-center justify-center"
       />
       {!dataLoaded && (
         <div className="absolute inset-0 flex items-center justify-center">
