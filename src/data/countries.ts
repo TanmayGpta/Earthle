@@ -1345,13 +1345,13 @@ export const COUNTRIES: Country[] = [
       "Kosovo",
       "Republic of Kosovo"
     ],
-    "capital": "Capital",
-    "flag": "🌐",
+    "capital": "Pristina",
+    "flag": "🇽🇰",
     "continent": "Europe",
     "lat": 42.56,
     "lng": 20.92,
     "altitude": 0.8,
-    "trivia": "Kosovo is located in Europe."
+    "trivia": "Kosovo has the youngest population in Europe, with over 50% of its citizens under the age of 30."
   },
   {
     "code": "KWT",
@@ -1999,15 +1999,17 @@ export const COUNTRIES: Country[] = [
     "name": "Palestine",
     "aliases": [
       "Palestine",
-      "West Bank and Gaza"
+      "State of Palestine",
+      "West Bank",
+      "Gaza"
     ],
-    "capital": "Capital",
-    "flag": "🌐",
+    "capital": "Ramallah",
+    "flag": "🇵🇸",
     "continent": "Asia",
     "lat": 31.94,
     "lng": 35.24,
     "altitude": 0.8,
-    "trivia": "Palestine is located in Asia."
+    "trivia": "Jericho in Palestine is recognized as one of the oldest continuously inhabited walled cities on Earth, dating back over 11,000 years."
   },
   {
     "code": "QAT",
@@ -2072,19 +2074,19 @@ export const COUNTRIES: Country[] = [
   },
   {
     "code": "SAH",
-    "name": "W. Sahara",
+    "name": "Western Sahara",
     "aliases": [
-      "W. Sahara",
       "Western Sahara",
-      "Sahrawi Arab Democratic Republic"
+      "W. Sahara",
+      "Sahrawi Republic"
     ],
-    "capital": "Capital",
-    "flag": "🌐",
+    "capital": "Laayoune",
+    "flag": "🇪🇭",
     "continent": "Africa",
     "lat": 24.33,
     "lng": -12.86,
     "altitude": 1.1,
-    "trivia": "W. Sahara is located in Africa."
+    "trivia": "Western Sahara is home to the world's longest conveyor belt (98 km), carrying phosphate across the desert to the Atlantic coast."
   },
   {
     "code": "SAU",
@@ -2118,19 +2120,19 @@ export const COUNTRIES: Country[] = [
   },
   {
     "code": "SDS",
-    "name": "S. Sudan",
+    "name": "South Sudan",
     "aliases": [
-      "S. Sudan",
       "South Sudan",
-      "Republic of South Sudan"
+      "S. Sudan",
+      "SSD"
     ],
-    "capital": "Capital",
-    "flag": "🌐",
+    "capital": "Juba",
+    "flag": "🇸🇸",
     "continent": "Africa",
     "lat": 7.88,
     "lng": 29.59,
     "altitude": 1.1,
-    "trivia": "S. Sudan is located in Africa."
+    "trivia": "South Sudan is the youngest recognized sovereign nation on Earth, gaining international independence in July 2011."
   },
   {
     "code": "SEN",
