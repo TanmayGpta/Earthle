@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
 import { answerFor, isCorrectAnswer, pickDistractors, shuffle } from '../lib/game';
-import GothicLogo from './GothicLogo';
-import ArtDecoFrame from './ArtDecoFrame';
+import DecoCard from './DecoCard';
 import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, ChevronRight, MapPin } from 'lucide-react';
 
 interface GameHUDProps {
@@ -157,195 +156,167 @@ export default function GameHUD({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const pill = 'bg-[#1c2c26]/90 backdrop-blur-md border border-[#daba89]/30 rounded-full shadow-xl';
+
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-4 md:p-6 select-none">
+    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-3 md:p-5 select-none">
       {/* Top Header */}
-      <div className="w-full flex items-center justify-between">
-        {/* Left: Exit & Gothic E Logo */}
-        <div className="pointer-events-auto flex items-center gap-3">
+      <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        {/* Left: Exit & Logo */}
+        <div className="pointer-events-auto flex items-center gap-3 justify-self-start">
           <button
             onClick={onExit}
-            className="flex items-center gap-2 px-4 py-2 bg-[#13201b]/90 border border-[#275f4b]/80 hover:border-[#e5ff42] text-xs font-mono uppercase tracking-wider text-[#f5f5f1] hover:text-[#e5ff42] transition-all"
+            className={`${pill} group flex items-center gap-2 pl-1.5 pr-4 py-1.5 text-[13px] font-light text-[#f5f5f1] hover:border-[#e5ff42]/60 transition-all`}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Menu</span>
+            <span className="w-6 h-6 rounded-full bg-[#f5f5f1]/10 flex items-center justify-center transition-transform duration-300 group-hover:-translate-x-0.5">
+              <ArrowLeft className="w-4 h-4" />
+            </span>
+            Menu
           </button>
-          <GothicLogo size={28} className="text-[#f5f5f1]/80 hidden sm:block" />
-        </div>
+                  </div>
 
         {/* Center Pill: Timer, Progress & Streak */}
-        <div className="pointer-events-auto flex items-center gap-3 md:gap-5 px-5 py-2.5 bg-[#13201b]/90 border border-[#275f4b]/80 shadow-2xl">
-          {/* Timer */}
+        <div className={`${pill} pointer-events-auto flex items-center gap-3 md:gap-4 px-5 py-1.5 text-[13px]`}>
           {settings.durationSeconds > 0 && (
-            <div
-              className={`flex items-center gap-1.5 font-mono text-xs md:text-sm font-semibold tracking-wider ${
-                timeLeft < 60 ? 'text-[#f87171] animate-pulse' : 'text-[#f5f5f1]'
-              }`}
-            >
-              <Timer className="w-3.5 h-3.5 opacity-70" />
-              <span>{formatTimer(timeLeft)}</span>
-            </div>
+            <>
+              <div
+                className={`flex items-center gap-1.5 tabular-nums font-medium ${
+                  timeLeft < 60 ? 'text-[#f87171] animate-pulse' : 'text-[#f5f5f1]'
+                }`}
+              >
+                <Timer className="w-4 h-4 opacity-70" />
+                <span>{formatTimer(timeLeft)}</span>
+              </div>
+              <div className="w-px h-4 bg-[#daba89]/30" />
+            </>
           )}
 
-          <div className="w-px h-4 bg-[#275f4b]/60" />
-
-          {/* Progress */}
-          <div className="flex items-center gap-1.5 text-xs font-mono font-medium">
-            <span className="text-[#628c7d]">SOLVED:</span>
-            <span className="font-bold text-[#e5ff42]">
-              {answeredCount} / {totalCountries}
-            </span>
+          <div className="flex items-baseline gap-1.5 tabular-nums">
+            <span className="font-serif text-[19px] leading-none text-[#e5ff42]">{answeredCount}</span>
+            <span className="font-light text-[#f5f5f1]/50">/ {totalCountries}</span>
           </div>
 
-          {/* Streak */}
           {streak > 1 && (
             <>
-              <div className="w-px h-4 bg-[#275f4b]/60" />
-              <div className="flex items-center gap-1 text-xs font-mono font-bold text-[#e5ff42] animate-bounce">
-                <Flame className="w-3.5 h-3.5 fill-current text-[#e5ff42]" />
-                <span>{streak} STREAK</span>
+              <div className="w-px h-4 bg-[#daba89]/30" />
+              <div key={streak} className="flex items-center gap-1 font-medium text-[#e5ff42] animate-rise">
+                <Flame className="w-4 h-4 fill-current" />
+                <span className="tabular-nums">{streak}</span>
               </div>
             </>
           )}
         </div>
 
         {/* Right Info Indicator */}
-        <div className="pointer-events-auto hidden md:flex items-center gap-2 text-[11px] font-mono uppercase text-[#628c7d]">
-          <span className="w-1.5 h-1.5 bg-[#e5ff42]" />
-          <span>{settings.continent === 'all' ? 'World Atlas' : settings.continent}</span>
+        <div className="pointer-events-auto hidden md:flex items-center gap-2 justify-self-end text-[12px] uppercase tracking-[0.1em] text-[#daba89]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#e5ff42]" />
+          <span>{settings.continent === 'all' ? 'World atlas' : settings.continent}</span>
         </div>
       </div>
 
       {/* Occasional Surprise Trivia Toast (Floats in top-right) */}
       {activeTrivia && (
-        <div className="pointer-events-auto absolute top-20 right-6 max-w-sm animate-in fade-in slide-in-from-top-4 duration-300 z-30">
-          <ArtDecoFrame
-            badge="ARCHIVE // DISCOVERY"
-            cornerSize={32}
-            cornerColor="text-[#e5ff42]"
-            className="p-4 shadow-2xl"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{activeTrivia.country.flag}</span>
-                <div>
-                  <span className="text-xs uppercase font-mono font-bold tracking-wider text-[#e5ff42] flex items-center gap-1">
-                    <Lightbulb className="w-3.5 h-3.5" /> Did You Know?
-                  </span>
-                  <p className="text-xs font-bold text-[#f5f5f1]">{activeTrivia.country.name}</p>
+        <div key={activeTrivia.id} className="pointer-events-auto absolute top-20 right-4 md:right-6 max-w-sm animate-rise z-30">
+          <DecoCard cornerSize={28} className="shadow-2xl">
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{activeTrivia.country.flag}</span>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.1em] text-[#daba89] flex items-center gap-1">
+                      <Lightbulb className="w-3.5 h-3.5" /> Did you know?
+                    </p>
+                    <p className="font-serif text-[22px] leading-tight">{activeTrivia.country.name}</p>
+                  </div>
                 </div>
+                <button
+                  onClick={onDismissTrivia}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[#f5f5f1]/50 hover:text-[#f5f5f1] hover:bg-[#f5f5f1]/10 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={onDismissTrivia}
-                className="text-[#f5f5f1]/40 hover:text-[#f5f5f1] transition-colors p-1"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+              <p className="mt-3 text-[14px] leading-[1.5] text-[#f5f5f1]/75 font-light">{activeTrivia.text}</p>
             </div>
-            <p className="mt-2.5 text-xs leading-relaxed text-[#f5f5f1]/80 font-light">
-              {activeTrivia.text}
-            </p>
-          </ArtDecoFrame>
+          </DecoCard>
         </div>
       )}
 
       {/* Answered Country Hover Card (Atlas Exploration) */}
       {hoveredCountry && (() => {
-        const record = answers[hoveredCountry.code];
-        const status = record?.status || 'correct';
-        const isCorrect = status === 'correct';
-        const isRevealed = status === 'revealed';
-
-        const borderColor = isCorrect
-          ? 'border-[#10b981]/70'
-          : isRevealed
-          ? 'border-[#f87171]/70'
-          : 'border-[#fb923c]/70';
-
-        const badgeColor = isCorrect
-          ? 'text-[#10b981]'
-          : isRevealed
-          ? 'text-[#f87171]'
-          : 'text-[#fb923c]';
-
-        const badgeLabel = isCorrect
-          ? 'Guessed Correctly'
-          : isRevealed
-          ? 'Answer Revealed'
-          : 'Skipped';
+        const status = answers[hoveredCountry.code]?.status || 'correct';
+        const meta = {
+          correct: { color: 'text-[#10b981]', label: 'Guessed correctly', Icon: CheckCircle2 },
+          revealed: { color: 'text-[#f87171]', label: 'Answer revealed', Icon: Eye },
+          skipped: { color: 'text-[#fb923c]', label: 'Skipped', Icon: SkipForward },
+        }[status];
 
         return (
-          <div className={`pointer-events-none absolute top-20 left-6 max-w-xs bg-[#13201b]/95 p-4 border ${borderColor} shadow-2xl animate-in fade-in duration-150 z-30`}>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{hoveredCountry.flag}</span>
-              <div>
-                <p className="text-sm font-serif italic font-bold text-[#f5f5f1]">{hoveredCountry.name}</p>
-                <p className="text-xs font-mono text-[#628c7d]">Capital: <span className="text-[#f5f5f1] font-semibold">{hoveredCountry.capital}</span></p>
+          <div className="pointer-events-none absolute top-20 left-4 md:left-6 w-72 z-30 animate-rise [animation-duration:0.4s]">
+            <DecoCard cornerSize={26} className="shadow-2xl">
+              <div className="p-5">
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl">{hoveredCountry.flag}</span>
+                  <div>
+                    <p className="font-serif text-[24px] leading-tight">{hoveredCountry.name}</p>
+                    <p className="text-[13px] font-light text-[#f5f5f1]/60">{hoveredCountry.capital}</p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-[#daba89]/20 flex items-center justify-between text-[12px]">
+                  <span className="flex items-center gap-1 text-[#daba89]">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {hoveredCountry.continent}
+                  </span>
+                  <span className={`${meta.color} flex items-center gap-1`}>
+                    <meta.Icon className="w-3.5 h-3.5" />
+                    {meta.label}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="mt-2.5 pt-2 border-t border-[#275f4b]/50 flex items-center justify-between text-[11px] font-mono text-[#f5f5f1]/70">
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-[#628c7d]" />
-                {hoveredCountry.continent}
-              </span>
-              <span className={`${badgeColor} font-semibold flex items-center gap-1`}>
-                {isCorrect ? (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                ) : isRevealed ? (
-                  <Eye className="w-3.5 h-3.5" />
-                ) : (
-                  <SkipForward className="w-3.5 h-3.5" />
-                )}
-                {badgeLabel}
-              </span>
-            </div>
+            </DecoCard>
           </div>
         );
       })()}
 
-      {/* Center Target Notification, Feedback & Reveal Modal */}
+      {/* Center: Reveal card & feedback */}
       <div className="w-full flex flex-col items-center justify-center my-auto px-4">
-        {/* Answer Revealed Card (When user clicks "What's the answer?") */}
         {revealedCountry ? (
-          <div className="pointer-events-auto max-w-md w-full animate-in zoom-in-95 duration-200 my-auto">
-            <ArtDecoFrame
-              badge="INTEL // TARGET REVEALED"
-              cornerSize={44}
-              cornerColor="text-[#e5ff42]"
-              className="p-6 text-center shadow-2xl"
-            >
-              <span className="text-5xl mb-2 block">{revealedCountry.flag}</span>
-              <span className="text-xs font-mono uppercase tracking-widest text-[#e5ff42] font-bold">
-                Classification Complete
-              </span>
-              <h3 className="text-3xl font-serif italic font-bold text-[#f5f5f1] mt-1 mb-1">
-                {revealedCountry.name}
-              </h3>
-              <p className="text-sm font-mono text-[#628c7d] mb-4">
-                CAPITAL: <span className="text-[#f5f5f1] font-semibold">{revealedCountry.capital}</span> • {revealedCountry.continent}
-              </p>
-              {revealedCountry.trivia && (
-                <p className="text-xs text-[#f5f5f1]/80 italic bg-[#0e1814]/90 p-3 mb-5 border border-[#275f4b]/60 leading-relaxed text-left font-light">
-                  💡 <span className="font-semibold text-[#e5ff42]">Atlas Archive:</span> {revealedCountry.trivia}
+          <div className="pointer-events-auto max-w-md w-full animate-rise">
+            <DecoCard cornerSize={48} className="shadow-2xl text-center">
+              <div className="px-8 py-10">
+                <span className="text-6xl block mb-3">{revealedCountry.flag}</span>
+                <p className="text-[12px] uppercase tracking-[0.1em] text-[#daba89]">The answer was</p>
+                <h3 className="font-serif text-[44px] leading-[1.04] tracking-[-0.02em] mt-1">{revealedCountry.name}</h3>
+                <p className="mt-2 text-[15px] font-light text-[#f5f5f1]/60">
+                  {revealedCountry.capital} · {revealedCountry.continent}
                 </p>
-              )}
-              <button
-                onClick={onConfirmNext}
-                className="w-full py-3.5 bg-[#e5ff42] text-[#1c2c26] text-xs font-mono font-bold uppercase tracking-wider hover:bg-[#d4ee38] transition-all flex items-center justify-center gap-2 shadow-lg"
-              >
-                <span>Continue to Next Target (Enter / Space)</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </ArtDecoFrame>
+                {revealedCountry.trivia && (
+                  <p className="mt-6 text-[14px] leading-[1.55] text-[#f5f5f1]/75 font-light text-left border-l-2 border-[#daba89]/50 pl-4">
+                    {revealedCountry.trivia}
+                  </p>
+                )}
+                <button
+                  onClick={onConfirmNext}
+                  className="group mt-8 w-full flex items-center justify-center gap-2 pl-7 pr-2 py-2 rounded-full bg-[#e5ff42] text-[#1c2c26] text-[15px] font-medium hover:bg-[#d4ee38] transition-colors"
+                >
+                  <span className="flex-1 text-center">Next country</span>
+                  <span className="text-[12px] text-[#1c2c26]/60 mr-2">Enter</span>
+                  <span className="w-9 h-9 rounded-full bg-[#1c2c26] text-[#e5ff42] flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5">
+                    <ChevronRight className="w-5 h-5" />
+                  </span>
+                </button>
+              </div>
+            </DecoCard>
           </div>
         ) : feedback ? (
           <div
-            className={`px-6 py-2.5 text-xs font-mono uppercase tracking-wider font-semibold shadow-2xl animate-in zoom-in-95 duration-150 border ${
+            key={feedback.message}
+            className={`px-6 py-3 rounded-full text-[15px] font-medium shadow-2xl animate-rise [animation-duration:0.35s] ${
               feedback.type === 'correct'
-                ? 'bg-[#10b981] text-[#1c2c26] border-[#10b981]'
+                ? 'bg-[#10b981] text-[#0e1814]'
                 : feedback.type === 'wrong'
-                ? 'bg-[#f87171] text-[#1c2c26] border-[#f87171]'
-                : 'bg-[#e5ff42] text-[#1c2c26] border-[#e5ff42]'
+                ? 'bg-[#f87171] text-[#0e1814]'
+                : 'bg-[#e5ff42] text-[#1c2c26]'
             }`}
           >
             {feedback.message}
@@ -353,90 +324,83 @@ export default function GameHUD({
         ) : null}
       </div>
 
-      {/* Bottom Action Island (Hidden when an answer is actively revealed) */}
+      {/* Bottom Question Card (Hidden when an answer is actively revealed) */}
       {!revealedCountry && (
-        <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3">
-          {/* Prompt Title */}
-          <div className="text-center">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-[#e5ff42] font-semibold mb-1">
-              {settings.mode === 'countries' ? '// IDENTIFY HIGHLIGHTED TERRITORY' : '// IDENTIFY COUNTRY CAPITAL'}
-            </p>
-            <h2 className="text-lg md:text-2xl font-serif italic text-[#f5f5f1]">
-              {settings.mode === 'countries'
-                ? 'What country is glowing on the globe?'
-                : `What is the capital of ${targetCountry.name}?`}
-            </h2>
-          </div>
+        <div className="w-full max-w-lg mx-auto pointer-events-auto">
+          <DecoCard cornerSize={24} className="shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)]">
+            <div className="px-4 py-4 md:px-5 flex flex-col items-center gap-3">
+              <div className="text-center">
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#daba89] mb-0.5">
+                  {settings.mode === 'countries' ? 'Name the glowing country' : 'Name the capital'}
+                </p>
+                <h2 key={targetCountry.code} className="font-serif text-[20px] md:text-[24px] leading-[1.15] tracking-[-0.01em] animate-rise [animation-duration:0.5s]">
+                  {settings.mode === 'countries' ? (
+                    'Which country is this?'
+                  ) : (
+                    <>
+                      What is the capital of <span className="text-[#e5ff42]">{targetCountry.name}</span>?
+                    </>
+                  )}
+                </h2>
+              </div>
 
-          {/* Dynamic Input: Type vs MCQ */}
-          {settings.inputType === 'type' ? (
-            <div className="w-full relative pointer-events-auto">
-              {/* Input Bar (No dropdown list: pure recall typing!) */}
-              <div className="relative flex items-center bg-[#13201b]/90 border border-[#275f4b]/80 focus-within:border-[#e5ff42] p-1.5 transition-all">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={typedInput}
-                  onChange={(e) => setTypedInput(e.target.value)}
-                  placeholder={
-                    settings.mode === 'countries'
-                      ? 'Type country name and press Enter...'
-                      : 'Type capital city name and press Enter...'
-                  }
-                  className="w-full bg-transparent px-4 py-3 text-sm md:text-base text-[#f5f5f1] placeholder-[#f5f5f1]/30 focus:outline-none font-mono"
-                />
+              {settings.inputType === 'type' ? (
+                <div className="w-full flex items-center rounded-full bg-[#f5f5f1] p-1 ring-2 ring-transparent focus-within:ring-[#e5ff42] transition-all">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={typedInput}
+                    onChange={(e) => setTypedInput(e.target.value)}
+                    placeholder={settings.mode === 'countries' ? 'Type the country…' : 'Type the capital…'}
+                    className="w-full bg-transparent px-4 py-2 text-[15px] text-[#1c2c26] placeholder-[#1c2c26]/40 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => typedInput.trim() && handleTypeSubmit(typedInput)}
+                    disabled={!typedInput.trim()}
+                    className="shrink-0 px-5 py-2 rounded-full bg-[#1c2c26] text-[#e5ff42] text-[14px] font-medium hover:bg-[#275f4b] disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    Submit
+                  </button>
+                </div>
+              ) : (
+                /* MCQ: light pills on the dark card for contrast */
+                <div key={targetCountry.code} className="w-full grid grid-cols-2 gap-2">
+                  {mcqOptions.map((option, index) => (
+                    <button
+                      key={option}
+                      onClick={() => handleMcqSelect(option)}
+                      style={{ animationDelay: `${index * 50}ms` }}
+                      className="group animate-rise [animation-duration:0.5s] flex items-center gap-2 rounded-full bg-[#f5f5f1] text-[#1c2c26] pl-1.5 pr-4 py-1.5 text-left hover:bg-[#e5ff42] hover:-translate-y-0.5 transition-all duration-300 ease-out-expo"
+                    >
+                      <span className="w-6 h-6 shrink-0 rounded-full bg-[#1c2c26] text-[#daba89] text-[12px] font-medium flex items-center justify-center group-hover:text-[#e5ff42] transition-colors">
+                        {index + 1}
+                      </span>
+                      <span className="text-[14px] font-medium truncate">{option}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Skip & Reveal */}
+              <div className="flex items-center gap-1 -mb-1 text-[13px] font-light">
                 <button
-                  onClick={() => typedInput.trim() && handleTypeSubmit(typedInput)}
-                  disabled={!typedInput.trim()}
-                  className="px-6 py-3 bg-[#e5ff42] text-[#1c2c26] text-xs font-bold font-mono uppercase tracking-wider hover:bg-[#d4ee38] disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  onClick={() => !lockedRef.current && onSkip()}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[#f5f5f1]/60 hover:text-[#f5f5f1] hover:bg-[#f5f5f1]/10 transition-all"
                 >
-                  Submit
+                  <SkipForward className="w-3.5 h-3.5" />
+                  Skip <span className="text-[12px] text-[#f5f5f1]/35">Space</span>
+                </button>
+                <span className="w-px h-4 bg-[#daba89]/30" />
+                <button
+                  onClick={() => !lockedRef.current && onReveal()}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[#f5f5f1]/60 hover:text-[#f87171] hover:bg-[#f87171]/10 transition-all"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Reveal answer
                 </button>
               </div>
             </div>
-          ) : (
-            /* MCQ Option Cards */
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 pointer-events-auto">
-              {mcqOptions.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleMcqSelect(option)}
-                  className="relative bg-[#13201b]/90 border border-[#275f4b]/80 hover:border-[#e5ff42] px-4 py-3.5 flex items-center justify-between text-left group transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-[#0e1814] border border-[#275f4b]/60 text-xs font-mono font-bold text-[#e5ff42] flex items-center justify-center group-hover:bg-[#e5ff42] group-hover:text-[#1c2c26] transition-all">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm font-semibold text-[#f5f5f1] group-hover:text-white">
-                      {option}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-[#628c7d] opacity-0 group-hover:opacity-100 transition-opacity">
-                    SELECT ↵
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Action Controls: Skip & Reveal */}
-          <div className="flex items-center gap-3 pointer-events-auto pt-1">
-            <button
-              onClick={() => !lockedRef.current && onSkip()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#13201b]/80 border border-[#275f4b]/60 hover:border-[#628c7d] text-xs font-mono uppercase tracking-wider text-[#f5f5f1]/70 hover:text-[#f5f5f1] transition-all"
-            >
-              <SkipForward className="w-3.5 h-3.5" />
-              <span>Skip Country (Space)</span>
-            </button>
-
-            <button
-              onClick={() => !lockedRef.current && onReveal()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#13201b]/80 border border-[#275f4b]/60 hover:border-[#f87171] text-xs font-mono uppercase tracking-wider text-[#f5f5f1]/70 hover:text-[#f87171] transition-all"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>What&apos;s the answer?</span>
-            </button>
-          </div>
+          </DecoCard>
         </div>
       )}
     </div>

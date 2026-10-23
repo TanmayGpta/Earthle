@@ -1,21 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+/* Palette mirrors Rainmaker's tokens (forest / canopy / pine / sage / mist / cloud / wheat / hi-vis) */
 @theme {
   --color-forest: #1c2c26;
   --color-forest-dark: #13201b;
   --color-canopy: #275f4b;
+  --color-pine: #103d1d;
   --color-spruce: #223830;
+  --color-sage: #628c7d;
+  --color-mist: #f5f5f1;
+  --color-cloud: #e0ded7;
+  --color-wheat: #daba89;
+  --color-obsidian: #030200;
+  --color-hi-vis: #e5ff42;
   --color-card: rgba(28, 44, 38, 0.75);
   --color-bone: #f5f5f1;
   --color-bone-muted: rgba(245, 245, 241, 0.6);
   --color-lime: #e5ff42;
-  --color-sage: #628c7d;
   --color-emerald-geo: #10b981;
   --color-coral-geo: #f87171;
 
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-display), Georgia, serif;
+  --font-sans: var(--font-grotesk), system-ui, -apple-system, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-rise: rise 0.9s var(--ease-out-expo) both;
+  --animate-marquee: marquee 60s linear infinite;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.6em);
+      filter: blur(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      filter: blur(0);
+    }
+  }
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 :root {
@@ -44,6 +74,43 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #628c7d;
+}
+
+/* Scroll-triggered reveal (toggled by <Reveal>) */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s var(--ease-out-expo),
+    transform 0.9s var(--ease-out-expo);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal[data-visible='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Film-grain overlay for photographic depth */
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-rise,
+  .animate-marquee {
+    animation: none;
+  }
 }
 
 /* Glassmorphism styling */

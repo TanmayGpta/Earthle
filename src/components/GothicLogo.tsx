@@ -6,21 +6,22 @@ interface GothicLogoProps {
 }
 
 /**
- * Authentic Gothic / Blackletter Fraktur "E" lettermark matching
- * the exact brand mark style of Rainmaker's gothic "R".
+ * 3-Arm Gothic Blackletter "E" lettermark.
+ * Features an authentic medieval fractured stem, angular roof, middle tongue,
+ * and sweeping base so it is unmistakably recognized as an "E" (not a "C").
  */
 export default function GothicLogo({ className = 'text-[#f5f5f1]', size = 36 }: GothicLogoProps) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 1350 1495"
+      viewBox="0 0 344 770"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       className={`transition-colors duration-300 ${className}`}
-      aria-label="Earthle Gothic Logo"
+      aria-label="Earthle Gothic Logo E"
     >
-      <path d="M473.0 126.0L493.0 157.0Q327.0 263.0 248.5 400.5Q170.0 538.0 170.0 695.0Q170.0 897.0 308.0 1081.0Q366.0 1033.0 378.0 1000.5Q390.0 968.0 390.0 833.0L390.0 373.0L827.0 0.0Q949.0 59.0 1032.5 82.0Q1116.0 105.0 1197.0 105.0Q1239.0 105.0 1301.0 96.0L1326.0 126.0L981.0 475.0L1251.0 475.0L1142.0 667.0L762.0 667.0L762.0 1315.0L826.0 1318.0Q968.0 1318.0 1108.0 1247.0Q1214.0 1194.0 1326.0 1081.0L1350.0 1119.0Q1234.0 1300.0 1094.0 1388.0Q923.0 1495.0 704.0 1495.0Q359.0 1495.0 159.0 1257.0Q0.0 1068.0 0.0 814.0Q0.0 656.0 65.0 519.5Q130.0 383.0 248.0 275.0Q332.0 199.0 473.0 126.0ZM716.0 175.0L594.0 277.0L594.0 741.0Q594.0 818.0 585.5 848.0Q577.0 878.0 546.0 913.0Q480.0 991.0 334.0 1112.0Q421.0 1204.0 506.5 1249.0Q592.0 1294.0 716.0 1311.0ZM1099.0 288.0Q994.0 273.0 926.5 252.0Q859.0 231.0 762.0 183.0L762.0 630.0Z" />
+      <path d="M138.0 97.0Q128.0 97.0 120.0 107.0L120.0 371.0L261.0 371.0L261.0 395.0L211.0 420.0L120.0 420.0L120.0 520.0Q120.0 631.0 142.0 650.0Q175.0 678.0 214.0 682.0Q253.0 686.0 298.0 686.0L298.0 715.0Q293.0 715.0 224.0 742.5Q155.0 770.0 140.0 770.0Q109.0 770.0 54.5 722.0Q0.0 674.0 0.0 618.0L0.0 92.0Q0.0 85.0 114.5 42.5Q229.0 0.0 246.0 0.0Q252.0 0.0 260.0 29.0Q268.0 58.0 278.5 99.0Q289.0 140.0 300.5 159.5Q312.0 179.0 344.0 179.0L344.0 199.0Q322.0 209.0 269.5 234.5Q217.0 260.0 213.0 260.0Q198.0 260.0 175.0 178.5Q152.0 97.0 138.0 97.0Z" />
     </svg>
   );
 }

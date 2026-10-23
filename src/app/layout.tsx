@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
+import { Instrument_Serif, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
+
+// Display serif + light grotesk, standing in for Rainmaker's Flecha + Founders Grotesk
+const display = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-display",
+});
+
+const grotesk = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-grotesk",
+});
 
 export const metadata: Metadata = {
   title: "Earthle — 3D Spatial Geography Quiz",
@@ -12,15 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`dark ${display.variable} ${grotesk.variable}`}>
       <body className="min-h-screen bg-[#1c2c26] text-[#f5f5f1] antialiased selection:bg-[#e5ff42] selection:text-[#1c2c26]">
         {children}
       </body>
