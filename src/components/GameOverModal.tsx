@@ -4,11 +4,14 @@ import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { GameSettings, AnswerRecord } from '../types/game';
 import ArtDecoFrame from './ArtDecoFrame';
+import { formatSeed } from '../lib/game';
 import { Trophy, RotateCcw, Share2, Eye, CheckCircle2, Flame, Award, Globe } from 'lucide-react';
 
 interface GameOverModalProps {
   settings: GameSettings;
   answers: Record<string, AnswerRecord>;
+  totalCountries: number;
+  runSeed: number;
   maxStreak: number;
   timeSpentSeconds: number;
   onPlayAgain: () => void;
@@ -18,6 +21,8 @@ interface GameOverModalProps {
 export default function GameOverModal({
   settings,
   answers,
+  totalCountries,
+  runSeed,
   maxStreak,
   timeSpentSeconds,
   onPlayAgain,
@@ -29,15 +34,18 @@ export default function GameOverModal({
   const correctCount = answerList.filter((a) => a.status === 'correct').length;
   const revealedCount = answerList.filter((a) => a.status === 'revealed').length;
   const skippedCount = answerList.filter((a) => a.status === 'skipped').length;
-  const totalAttempted = answerList.length;
+  // Skipped countries were never actually answered
+  const totalAttempted = correctCount + revealedCount;
 
   const accuracy = totalAttempted > 0 ? Math.round((correctCount / totalAttempted) * 100) : 0;
+  // Rank on share of the whole pool mastered, so quitting early can't earn a top title
+  const coverage = totalCountries > 0 ? correctCount / totalCountries : 0;
 
   // Rank title
   let rank = 'Cartographer Apprentice';
-  if (accuracy >= 90) rank = 'Supreme Global Cartographer';
-  else if (accuracy >= 75) rank = 'Master Navigator';
-  else if (accuracy >= 50) rank = 'World Explorer';
+  if (coverage >= 0.85) rank = 'Supreme Global Cartographer';
+  else if (coverage >= 0.6) rank = 'Master Navigator';
+  else if (coverage >= 0.3) rank = 'World Explorer';
 
   // Confetti trigger on mount
   useEffect(() => {
@@ -60,7 +68,8 @@ export default function GameOverModal({
   };
 
   const handleShare = () => {
-    const text = `🌍 Earthle Run Finished!\nMode: ${settings.mode.toUpperCase()} (${settings.inputType.toUpperCase()})\nScore: ${correctCount}/${totalAttempted} (${accuracy}%)\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPlay at earthle.vercel.app`;
+    const text = `🌍 Earthle Run Finished!\nMode: ${settings.mode.toUpperCase()} (${settings.inputType.toUpperCase()})\nScore: ${correctCount}/${totalCountries} (${accuracy}% accuracy)
+Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPlay at earthle.vercel.app`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -86,6 +95,9 @@ export default function GameOverModal({
           <h2 className="text-2xl md:text-3xl font-serif italic text-[#f5f5f1]">
             Expedition Complete
           </h2>
+          <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#628c7d] mt-1">
+            Run #{formatSeed(runSeed)}
+          </p>
 
           {/* Big Score Display */}
           <div className="my-6 p-4 bg-[#0e1814]/90 border border-[#275f4b]/60 flex items-center justify-around font-mono">

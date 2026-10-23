@@ -13,6 +13,7 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
 
   useEffect(() => {
     let isMounted = true;
+    let handleResize: (() => void) | null = null;
 
     // Load countries GeoJSON and initialize globe.gl
     Promise.all([
@@ -38,7 +39,7 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
           .showAtmosphere(true)
           .atmosphereColor('#628c7d')
           .atmosphereAltitude(0.18)
-          .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg') // Dark subtle base
+          .globeImageUrl('/img/earth-dark.jpg') // Dark subtle base
           .polygonsData(geoData.features)
           .polygonAltitude(0.008)
           .polygonCapColor(() => '#274137') // Rainmaker forest land
@@ -60,7 +61,7 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
         globeInstanceRef.current = globe;
         setDataLoaded(true);
 
-        const handleResize = () => {
+        handleResize = () => {
           if (containerRef.current && globeInstanceRef.current) {
             globeInstanceRef.current.width(containerRef.current.clientWidth);
             globeInstanceRef.current.height(containerRef.current.clientHeight);
@@ -68,7 +69,6 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
         };
 
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
       })
       .catch((err) => {
         console.error('Failed to load hero globe:', err);
@@ -76,6 +76,7 @@ export default function HeroGlobe({ scrollProgress }: HeroGlobeProps) {
 
     return () => {
       isMounted = false;
+      if (handleResize) window.removeEventListener('resize', handleResize);
       if (globeInstanceRef.current) {
         try {
           globeInstanceRef.current._destructor?.();

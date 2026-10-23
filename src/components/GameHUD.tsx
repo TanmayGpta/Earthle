@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
-import { COUNTRIES } from '../data/countries';
+import { answerFor, isCorrectAnswer, pickDistractors, shuffle } from '../lib/game';
 import GothicLogo from './GothicLogo';
 import ArtDecoFrame from './ArtDecoFrame';
 import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, ChevronRight, MapPin } from 'lucide-react';
@@ -10,6 +10,7 @@ import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, 
 interface GameHUDProps {
   settings: GameSettings;
   targetCountry: Country;
+  totalCountries: number;
   revealedCountry: Country | null;
   answers: Record<string, AnswerRecord>;
   streak: number;
@@ -17,7 +18,7 @@ interface GameHUDProps {
   hoveredCountry: Country | null;
   activeTrivia: ActiveTrivia | null;
   onDismissTrivia: () => void;
-  onSubmitAnswer: (input: string) => void;
+  onSubmitAnswer: (isCorrect: boolean) => void;
   onSkip: () => void;
   onReveal: () => void;
   onConfirmNext: () => void;
@@ -27,6 +28,7 @@ interface GameHUDProps {
 export default function GameHUD({
   settings,
   targetCountry,
+  totalCountries,
   revealedCountry,
   answers,
   streak,
@@ -44,31 +46,26 @@ export default function GameHUD({
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'wrong' | 'reveal'; message: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Blocks input while a wrong-MCQ answer is shown, so it can't be submitted twice
+  const lockedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const answeredCount = Object.keys(answers).length;
-  const totalCountries = COUNTRIES.filter(
-    (c) => settings.continent === 'all' || c.continent === settings.continent
-  ).length;
+  const answeredCount = Object.values(answers).filter((a) => a.status !== 'skipped').length;
+
+  const later = (fn: () => void, ms: number) => {
+    timeoutsRef.current.push(setTimeout(fn, ms));
+  };
+
+  // Cancel pending feedback/submit timers on unmount (e.g. timer hits zero mid-feedback)
+  useEffect(() => () => timeoutsRef.current.forEach(clearTimeout), []);
 
   // Generate MCQ options when targetCountry changes
   useEffect(() => {
     if (settings.inputType !== 'mcq') return;
 
-    const isCapital = settings.mode === 'capitals';
-    const correctAnswer = isCapital ? targetCountry.capital : targetCountry.name;
-
-    // Pick 3 distractors, preferably from same continent
-    const pool = COUNTRIES.filter(
-      (c) =>
-        c.code !== targetCountry.code &&
-        (isCapital ? c.capital !== targetCountry.capital : c.name !== targetCountry.name)
-    );
-
-    // Shuffle pool
-    const shuffledPool = [...pool].sort(() => 0.5 - Math.random());
-    const distractors = shuffledPool.slice(0, 3).map((c) => (isCapital ? c.capital : c.name));
-
-    const options = [correctAnswer, ...distractors].sort(() => 0.5 - Math.random());
+    lockedRef.current = false;
+    const correctAnswer = answerFor(targetCountry, settings.mode);
+    const options = shuffle([correctAnswer, ...pickDistractors(targetCountry, settings.mode)]);
     setMcqOptions(options);
   }, [targetCountry, settings.mode, settings.inputType]);
 
@@ -111,7 +108,7 @@ export default function GameHUD({
       }
 
       // Space to skip
-      if (e.code === 'Space' && document.activeElement !== inputRef.current) {
+      if (e.code === 'Space' && document.activeElement !== inputRef.current && !lockedRef.current) {
         e.preventDefault();
         onSkip();
       }
@@ -119,45 +116,36 @@ export default function GameHUD({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mcqOptions, typedInput, settings.inputType, revealedCountry]);
+  }); // Re-bind each render so handlers never see stale props
 
   const handleTypeSubmit = (answer: string) => {
-    const isCapital = settings.mode === 'capitals';
-    const target = isCapital ? targetCountry.capital : targetCountry.name;
-    const query = answer.trim().toLowerCase();
-
-    const isMatch = isCapital
-      ? target.toLowerCase() === query
-      : target.toLowerCase() === query ||
-        targetCountry.aliases.some((a) => a.toLowerCase() === query);
-
-    if (isMatch) {
+    if (isCorrectAnswer(targetCountry, settings.mode, answer)) {
       setFeedback({ type: 'correct', message: `✓ Correct! That is ${targetCountry.name}` });
-      setTimeout(() => setFeedback(null), 1200);
-      onSubmitAnswer(answer);
+      later(() => setFeedback(null), 1200);
+      onSubmitAnswer(true);
       setTypedInput('');
     } else {
       setFeedback({ type: 'wrong', message: `✕ Not quite, try again or skip!` });
-      setTimeout(() => setFeedback(null), 1200);
+      later(() => setFeedback(null), 1200);
     }
   };
 
   const handleMcqSelect = (choice: string) => {
-    const isCapital = settings.mode === 'capitals';
-    const target = isCapital ? targetCountry.capital : targetCountry.name;
+    if (lockedRef.current) return;
 
-    if (choice.toLowerCase() === target.toLowerCase()) {
+    if (isCorrectAnswer(targetCountry, settings.mode, choice)) {
       setFeedback({ type: 'correct', message: `✓ Correct! ${targetCountry.name}` });
-      setTimeout(() => setFeedback(null), 1000);
-      onSubmitAnswer(choice);
+      later(() => setFeedback(null), 1000);
+      onSubmitAnswer(true);
     } else {
+      lockedRef.current = true;
       setFeedback({
         type: 'wrong',
-        message: `✕ Incorrect! It was ${isCapital ? targetCountry.capital : targetCountry.name}`,
+        message: `✕ Incorrect! It was ${answerFor(targetCountry, settings.mode)}`,
       });
-      setTimeout(() => {
+      later(() => {
         setFeedback(null);
-        onSubmitAnswer(choice); // Fail moves to next
+        onSubmitAnswer(false); // Fail moves to next
       }, 1400);
     }
   };
@@ -434,7 +422,7 @@ export default function GameHUD({
           {/* Action Controls: Skip & Reveal */}
           <div className="flex items-center gap-3 pointer-events-auto pt-1">
             <button
-              onClick={onSkip}
+              onClick={() => !lockedRef.current && onSkip()}
               className="flex items-center gap-1.5 px-4 py-2 bg-[#13201b]/80 border border-[#275f4b]/60 hover:border-[#628c7d] text-xs font-mono uppercase tracking-wider text-[#f5f5f1]/70 hover:text-[#f5f5f1] transition-all"
             >
               <SkipForward className="w-3.5 h-3.5" />
@@ -442,7 +430,7 @@ export default function GameHUD({
             </button>
 
             <button
-              onClick={onReveal}
+              onClick={() => !lockedRef.current && onReveal()}
               className="flex items-center gap-1.5 px-4 py-2 bg-[#13201b]/80 border border-[#275f4b]/60 hover:border-[#f87171] text-xs font-mono uppercase tracking-wider text-[#f5f5f1]/70 hover:text-[#f87171] transition-all"
             >
               <Eye className="w-3.5 h-3.5" />

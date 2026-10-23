@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
-import { COUNTRIES } from '../data/countries';
+import { getCountryPool, createRng, newSeed, shuffle } from '../lib/game';
 import GameHUD from '../components/GameHUD';
 import GameOverModal from '../components/GameOverModal';
 import GothicLogo from '../components/GothicLogo';
@@ -39,6 +39,7 @@ export default function EarthleHome() {
   const [maxStreak, setMaxStreak] = useState(0);
   const [timeLeft, setTimeLeft] = useState(900);
   const [timeSpent, setTimeSpent] = useState(0);
+  const [runSeed, setRunSeed] = useState(0);
 
   // Hover & Trivia interaction
   const [hoveredCountry, setHoveredCountry] = useState<Country | null>(null);
@@ -72,25 +73,21 @@ export default function EarthleHome() {
     };
   }, [isPlaying]);
 
-  // Filter countries by continent
-  const availableCountries = useMemo(() => {
-    if (settings.continent === 'all') return COUNTRIES;
-    return COUNTRIES.filter((c) => c.continent === settings.continent);
-  }, [settings.continent]);
+  // Countries playable under current settings
+  const availableCountries = useMemo(
+    () => getCountryPool(settings),
+    [settings.mode, settings.continent]
+  );
 
   // Start / Launch Game
   const startGame = (customSettings?: Partial<GameSettings>) => {
     const activeSettings = { ...settings, ...customSettings };
     setSettings(activeSettings);
 
-    // Shuffle countries
-    const filtered =
-      activeSettings.continent === 'all'
-        ? [...COUNTRIES]
-        : COUNTRIES.filter((c) => c.continent === activeSettings.continent);
-
-    const shuffled = filtered.sort(() => 0.5 - Math.random());
-    setCountryQueue(shuffled);
+    // Fresh random seed every run; nothing is persisted
+    const seed = newSeed();
+    setRunSeed(seed);
+    setCountryQueue(shuffle(getCountryPool(activeSettings), createRng(seed)));
     setCurrentCountryIndex(0);
     setAnswers({});
     setStreak(0);
@@ -108,12 +105,14 @@ export default function EarthleHome() {
   // Target Country
   const targetCountry = countryQueue[currentCountryIndex] || null;
 
-  // Countdown timer
+  // Game clock: elapsed time always ticks, countdown only when timed
   useEffect(() => {
     if (!isPlaying || isGameOver || isReviewingAtlas) return;
-    if (settings.durationSeconds <= 0) return; // Unlimited zen mode
+    const timed = settings.durationSeconds > 0; // 0 = unlimited zen mode
 
     const timer = setInterval(() => {
+      setTimeSpent((prev) => prev + 1);
+      if (!timed) return;
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
@@ -122,7 +121,6 @@ export default function EarthleHome() {
         }
         return prev - 1;
       });
-      setTimeSpent((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(timer);
@@ -137,44 +135,36 @@ export default function EarthleHome() {
     }
   };
 
-  // Submit Answer
-  const handleSubmitAnswer = (input: string) => {
-    if (!targetCountry) return;
-
-    const isCapital = settings.mode === 'capitals';
-    const target = isCapital ? targetCountry.capital : targetCountry.name;
-    const query = input.trim().toLowerCase();
-
-    const isMatch = isCapital
-      ? target.toLowerCase() === query
-      : target.toLowerCase() === query ||
-        targetCountry.aliases.some((a) => a.toLowerCase() === query);
-
-    const newAnswers = {
-      ...answers,
-      [targetCountry.code]: {
-        countryCode: targetCountry.code,
-        status: isMatch ? ('correct' as const) : ('revealed' as const),
-        attempts: 1,
+  const recordAnswer = (code: string, status: AnswerRecord['status']) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [code]: {
+        countryCode: code,
+        status,
+        attempts: (prev[code]?.attempts ?? 0) + 1,
         timestamp: Date.now(),
       },
-    };
-    setAnswers(newAnswers);
+    }));
+  };
 
-    if (isMatch) {
+  // Submit Answer (correctness is decided by the HUD)
+  const handleSubmitAnswer = (isCorrect: boolean) => {
+    if (!targetCountry) return;
+
+    recordAnswer(targetCountry.code, isCorrect ? 'correct' : 'revealed');
+
+    if (isCorrect) {
       const nextStreak = streak + 1;
       setStreak(nextStreak);
-      if (nextStreak > maxStreak) setMaxStreak(nextStreak);
+      setMaxStreak((prev) => Math.max(prev, nextStreak));
 
-      // Occasional surprise trivia (15% random chance or on milestone streak)
-      if (Math.random() < 0.18 || nextStreak % 5 === 0) {
-        if (targetCountry.trivia) {
-          setActiveTrivia({
-            country: targetCountry,
-            text: targetCountry.trivia,
-            id: String(Date.now()),
-          });
-        }
+      // Occasional surprise trivia (18% random chance or on milestone streak)
+      if ((Math.random() < 0.18 || nextStreak % 5 === 0) && targetCountry.trivia) {
+        setActiveTrivia({
+          country: targetCountry,
+          text: targetCountry.trivia,
+          id: String(Date.now()),
+        });
       }
     } else {
       setStreak(0);
@@ -183,10 +173,11 @@ export default function EarthleHome() {
     advanceToNext();
   };
 
-  // Skip Country (moves to back of queue)
+  // Skip Country (marked skipped, moves to back of queue)
   const handleSkip = () => {
     if (!targetCountry) return;
     setStreak(0);
+    recordAnswer(targetCountry.code, 'skipped');
 
     // Re-insert into queue at the end
     setCountryQueue((prev) => {
@@ -201,15 +192,7 @@ export default function EarthleHome() {
     if (!targetCountry) return;
 
     setStreak(0);
-    setAnswers((prev) => ({
-      ...prev,
-      [targetCountry.code]: {
-        countryCode: targetCountry.code,
-        status: 'revealed',
-        attempts: 1,
-        timestamp: Date.now(),
-      },
-    }));
+    recordAnswer(targetCountry.code, 'revealed');
 
     // Show the revealed country card so the player can actually learn what the country was!
     setRevealedCountry(targetCountry);
@@ -247,6 +230,7 @@ export default function EarthleHome() {
             <GameHUD
               settings={settings}
               targetCountry={targetCountry}
+              totalCountries={countryQueue.length}
               revealedCountry={revealedCountry}
               answers={answers}
               streak={streak}
@@ -267,6 +251,8 @@ export default function EarthleHome() {
             <GameOverModal
               settings={settings}
               answers={answers}
+              totalCountries={countryQueue.length}
+              runSeed={runSeed}
               maxStreak={maxStreak}
               timeSpentSeconds={timeSpent}
               onPlayAgain={() => startGame()}
@@ -480,7 +466,7 @@ export default function EarthleHome() {
                   <div className="pt-2">
                     <h3 className="text-2xl font-serif italic text-[#f5f5f1] mb-2">Territory Scope</h3>
                     <p className="text-xs text-[#f5f5f1]/70 leading-relaxed mb-6 font-light">
-                      Focus on specific continental landmasses or challenge all 177 sovereign nations globally.
+                      Focus on specific continental landmasses or challenge every country on the map.
                     </p>
                   </div>
 
@@ -490,7 +476,7 @@ export default function EarthleHome() {
                       onChange={(e) => setSettings((s) => ({ ...s, continent: e.target.value }))}
                       className="w-full bg-[#0e1814]/90 border border-[#275f4b]/60 px-4 py-3 text-xs font-mono uppercase tracking-wider font-bold text-[#f5f5f1] focus:outline-none focus:border-[#e5ff42]"
                     >
-                      <option value="all">Entire World (177 Countries)</option>
+                      <option value="all">Entire World ({getCountryPool({ mode: settings.mode, continent: 'all' }).length} Countries)</option>
                       <option value="Europe">Europe</option>
                       <option value="Asia">Asia</option>
                       <option value="Africa">Africa</option>
@@ -511,7 +497,7 @@ export default function EarthleHome() {
                   <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
                 <p className="text-xs font-mono tracking-wider text-[#628c7d]">
-                  15:00 TIMER • {availableCountries.length} TARGET COUNTRIES • INSTANT SPATIAL FEEDBACK
+                  {settings.durationSeconds > 0 ? `${Math.round(settings.durationSeconds / 60)}:00 TIMER` : 'NO TIMER'} • {availableCountries.length} TARGET COUNTRIES • INSTANT SPATIAL FEEDBACK
                 </p>
               </div>
             </div>
