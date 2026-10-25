@@ -112,7 +112,12 @@ export const COUNTRIES: Country[] = [
     "aliases": [
       "Fr. S. Antarctic Lands",
       "French Southern and Antarctic Lands",
-      "Territory of the French Southern and Antarctic Lands"
+      "Antarctic Lands",
+      "Southern Antarctic Lands",
+      "French Southern Territories",
+      "French Antarctic Lands",
+      "Territory of the French Southern and Antarctic Lands",
+      "TAAF"
     ],
     "capital": "Port-aux-Français",
     "flag": "🇹🇫",
@@ -277,7 +282,9 @@ export const COUNTRIES: Country[] = [
     "aliases": [
       "Bosnia and Herz.",
       "Bosnia and Herzegovina",
-      "Bosnia and Herzegovina"
+      "Bosnia",
+      "Herzegovina",
+      "Bosnia Herzegovina"
     ],
     "capital": "Sarajevo",
     "flag": "🇧🇦",
@@ -398,7 +405,8 @@ export const COUNTRIES: Country[] = [
     "aliases": [
       "Central African Rep.",
       "Central African Republic",
-      "Central African Republic"
+      "Central Africa",
+      "CAR"
     ],
     "capital": "Bangui",
     "flag": "🇨🇫",
@@ -472,7 +480,11 @@ export const COUNTRIES: Country[] = [
     "name": "Côte d'Ivoire",
     "aliases": [
       "Côte d'Ivoire",
-      "Republic of Ivory Coast"
+      "Cote d'Ivoire",
+      "Cote dIvoire",
+      "Ivory Coast",
+      "Republic of Ivory Coast",
+      "Cote Ivoire"
     ],
     "capital": "Yamoussoukro",
     "flag": "🇨🇮",
@@ -503,11 +515,12 @@ export const COUNTRIES: Country[] = [
     "aliases": [
       "Dem. Rep. Congo",
       "Democratic Republic of the Congo",
-      "Democratic Republic of the Congo",
       "DR Congo",
       "DRC",
       "Congo DRC",
-      "Democratic Republic of the Congo"
+      "Congo Kinshasa",
+      "Congo",
+      "Zaire"
     ],
     "capital": "Kinshasa",
     "flag": "🇨🇩",
@@ -522,8 +535,6 @@ export const COUNTRIES: Country[] = [
     "name": "Congo",
     "aliases": [
       "Congo",
-      "Republic of the Congo",
-      "Republic of the Congo",
       "Republic of the Congo",
       "Congo Brazzaville"
     ],
@@ -678,7 +689,7 @@ export const COUNTRIES: Country[] = [
     "aliases": [
       "Dominican Rep.",
       "Dominican Republic",
-      "Dominican Republic"
+      "Dominican"
     ],
     "capital": "Santo Domingo",
     "flag": "🇩🇴",
@@ -874,11 +885,11 @@ export const COUNTRIES: Country[] = [
     "name": "United Kingdom",
     "aliases": [
       "United Kingdom",
-      "United Kingdom of Great Britain and Northern Ireland",
       "UK",
       "Britain",
       "Great Britain",
-      "United Kingdom"
+      "England",
+      "United Kingdom of Great Britain and Northern Ireland"
     ],
     "capital": "London",
     "flag": "🇬🇧",
@@ -2542,10 +2553,9 @@ export const COUNTRIES: Country[] = [
     "aliases": [
       "United States of America",
       "United States",
-      "US",
+      "USA",
       "America",
-      "United States",
-      "United States of America"
+      "US"
     ],
     "capital": "Washington, D.C.",
     "flag": "🇺🇸",

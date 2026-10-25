@@ -17,12 +17,15 @@ const CAPITAL_ALIASES: Record<string, string[]> = {
 export const normalize = (s: string) =>
   s
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/['’`.]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^the /, '');
+
+export const compact = (s: string) => normalize(s).replace(/\s+/g, '');
 
 export const answerFor = (country: Country, mode: GameMode) =>
   mode === 'capitals' ? country.capital : country.name;
@@ -30,11 +33,35 @@ export const answerFor = (country: Country, mode: GameMode) =>
 export const isCorrectAnswer = (country: Country, mode: GameMode, input: string) => {
   const query = normalize(input);
   if (!query) return false;
+  const compactQuery = compact(input);
+
   const accepted =
     mode === 'capitals'
       ? [country.capital, ...(CAPITAL_ALIASES[country.code] ?? [])]
       : [country.name, ...country.aliases];
-  return accepted.some((a) => normalize(a) === query);
+
+  // 1. Direct or compact match (handles accents, apostrophes, and spacing variants)
+  if (accepted.some((a) => normalize(a) === query || compact(a) === compactQuery)) {
+    return true;
+  }
+
+  // 2. Shorthand prefix/suffix matching for multi-word country names (min 4 chars)
+  // e.g. "bosnia" -> "Bosnia and Herz.", "antarctic lands" -> "Fr. S. Antarctic Lands",
+  // "trinidad" -> "Trinidad and Tobago", "falkland" -> "Falkland Is."
+  if (mode === 'countries' && query.length >= 4) {
+    for (const a of accepted) {
+      const normA = normalize(a);
+      if (
+        normA.startsWith(query + ' ') ||
+        normA.startsWith(query + ' and') ||
+        normA.endsWith(' ' + query)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 };
 
 // 'Americas' covers both North and South America in the data
