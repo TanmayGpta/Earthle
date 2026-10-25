@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Hanken_Grotesk } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 // Display serif + light grotesk, standing in for Rainmaker's Flecha + Founders Grotesk
@@ -30,6 +31,7 @@ export default function RootLayout({
     <html lang="en" className={`dark ${display.variable} ${grotesk.variable}`}>
       <body className="min-h-screen bg-[#1c2c26] text-[#f5f5f1] antialiased selection:bg-[#e5ff42] selection:text-[#1c2c26]">
         {children}
+        <Analytics />
       </body>
     </html>
   );
