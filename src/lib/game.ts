@@ -48,7 +48,7 @@ export const isCorrectAnswer = (country: Country, mode: GameMode, input: string)
   // 2. Shorthand prefix/suffix matching for multi-word country names (min 4 chars)
   // e.g. "bosnia" -> "Bosnia and Herz.", "antarctic lands" -> "Fr. S. Antarctic Lands",
   // "trinidad" -> "Trinidad and Tobago", "falkland" -> "Falkland Is."
-  if (mode === 'countries' && query.length >= 4) {
+  if (mode !== 'capitals' && query.length >= 4) {
     for (const a of accepted) {
       const normA = normalize(a);
       if (
@@ -70,14 +70,25 @@ export const matchesContinent = (country: Country, continent: string) =>
   country.continent === continent ||
   (continent === 'Americas' && country.continent.endsWith('America'));
 
+// Territories that fly another country's flag (N. Cyprus, Somaliland) — ambiguous in flags mode
+const SHARED_FLAGS = new Set(['CYN', 'SOL']);
+
 // Countries playable under the given settings
 export const getCountryPool = (settings: Pick<GameSettings, 'mode' | 'continent'>) =>
   COUNTRIES.filter(
     (c) =>
       c.continent !== 'Antarctica' &&
       (settings.mode !== 'capitals' || c.capital !== 'None') &&
+      (settings.mode !== 'flags' || !SHARED_FLAGS.has(c.code)) &&
       matchesContinent(c, settings.continent)
   );
+
+// Flag emoji is two regional-indicator letters -> ISO 3166 alpha-2 ("🇫🇯" -> "fj")
+export const isoCode = (country: Country) =>
+  [...country.flag].map((ch) => String.fromCharCode(ch.codePointAt(0)! - 0x1f1e6 + 97)).join('');
+
+// SVG flag image (emoji flags don't render on Windows)
+export const flagUrl = (country: Country) => `https://flagcdn.com/${isoCode(country)}.svg`;
 
 // Seeded PRNG (mulberry32) so a run is reproducible from its seed
 export const createRng = (seed: number) => {

@@ -8,6 +8,8 @@ interface InteractiveGlobeProps {
   targetCountry: Country | null;
   answers: Record<string, AnswerRecord>;
   onCountryHover: (country: Country | null, coords?: { x: number; y: number }) => void;
+  // false = only fly the camera to the target (flags mode: lighting it would give the answer away)
+  highlightTarget?: boolean;
 }
 
 // Map of ADM0_A3 -> Country object for fast lookup
@@ -19,6 +21,7 @@ export default function InteractiveGlobe({
   targetCountry,
   answers,
   onCountryHover,
+  highlightTarget = true,
 }: InteractiveGlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
@@ -28,10 +31,15 @@ export default function InteractiveGlobe({
   const answersRef = useRef(answers);
   const hoveredCodeRef = useRef<string | null>(null);
   const onHoverRef = useRef(onCountryHover);
+  const highlightRef = useRef(highlightTarget);
+
+  // Code of the polygon to light up lime, if any
+  const litCode = () => (highlightRef.current ? targetRef.current?.code : undefined);
 
   // Sync refs before the other effects below run (effects run in declaration order)
   useEffect(() => {
     targetRef.current = targetCountry;
+    highlightRef.current = highlightTarget;
     answersRef.current = answers;
     onHoverRef.current = onCountryHover;
   });
@@ -44,7 +52,7 @@ export default function InteractiveGlobe({
     globe
       .polygonAltitude((feat: any) => {
         const code = featCode(feat);
-        if (code === targetRef.current?.code) return 0.045; // Pop up target
+        if (code === litCode()) return 0.045; // Pop up target
         if (code === hoveredCodeRef.current) return 0.025;
         if (answersRef.current[code]) return 0.02;
         return 0.008;
@@ -52,7 +60,7 @@ export default function InteractiveGlobe({
       .polygonCapColor((feat: any) => {
         const code = featCode(feat);
         // 1. Current Target: Acid Lime
-        if (code === targetRef.current?.code) return '#e5ff42';
+        if (code === litCode()) return '#e5ff42';
         // 2. Answered status
         const record = answersRef.current[code];
         if (record?.status === 'correct') return '#10b981'; // Emerald
@@ -63,7 +71,7 @@ export default function InteractiveGlobe({
       })
       .polygonSideColor((feat: any) => {
         const code = featCode(feat);
-        if (code === targetRef.current?.code) return 'rgba(229, 255, 66, 0.4)';
+        if (code === litCode()) return 'rgba(229, 255, 66, 0.4)';
         const record = answersRef.current[code];
         if (record?.status === 'correct') return 'rgba(16, 185, 129, 0.3)';
         if (record?.status === 'revealed') return 'rgba(248, 113, 113, 0.3)';
@@ -72,7 +80,7 @@ export default function InteractiveGlobe({
       })
       .polygonStrokeColor((feat: any) => {
         const code = featCode(feat);
-        if (code === hoveredCodeRef.current || code === targetRef.current?.code) return '#ffffff';
+        if (code === hoveredCodeRef.current || code === litCode()) return '#ffffff';
         return 'rgba(245, 245, 241, 0.25)';
       });
   };

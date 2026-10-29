@@ -6,6 +6,8 @@ import { GameSettings } from '../types/game';
 import { COUNTRIES } from '../data/countries';
 import DecoCard from './DecoCard';
 import Reveal from './Reveal';
+import ModePicker from './ModePicker';
+import Flag from './Flag';
 
 interface LandingProps {
   settings: GameSettings;
@@ -14,21 +16,6 @@ interface LandingProps {
   worldCount: number;
   onStart: (patch?: Partial<GameSettings>) => void;
 }
-
-const REGIONS = [
-  { value: 'all', label: 'World' },
-  { value: 'Africa', label: 'Africa' },
-  { value: 'Americas', label: 'Americas' },
-  { value: 'Asia', label: 'Asia' },
-  { value: 'Europe', label: 'Europe' },
-  { value: 'Oceania', label: 'Oceania' },
-];
-
-const DURATIONS = [
-  { value: 300, label: '5 min' },
-  { value: 900, label: '15 min' },
-  { value: 0, label: 'No timer' },
-];
 
 // Noun + verb pairs, after Rainmaker's Software / Drone / Radar strip
 const STEPS = [
@@ -42,44 +29,6 @@ const HEADLINE = ['Spot it.', 'Name it.', 'Know the world.'];
 // Deterministic sample (random here would break SSR hydration)
 const TICKER = COUNTRIES.filter((c, i) => c.continent !== 'Antarctica' && i % 4 === 0);
 
-// Pill segmented control used in the configurator
-function Segmented<T extends string | number>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div>
-      <p className="text-[12px] uppercase tracking-[0.1em] text-[#628c7d] mb-3">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => {
-          const active = o.value === value;
-          return (
-            <button
-              key={String(o.value)}
-              onClick={() => onChange(o.value)}
-              aria-pressed={active}
-              className={`px-5 py-2.5 rounded-full text-[15px] transition-all duration-300 ease-out-expo ${
-                active
-                  ? 'bg-[#1c2c26] text-[#e5ff42] shadow-[0_8px_24px_-12px_rgba(28,44,38,0.8)]'
-                  : 'bg-transparent text-[#1c2c26] border border-[#1c2c26]/15 hover:border-[#1c2c26]/50'
-              }`}
-            >
-              {o.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export default function Landing({ settings, onSettingsChange, availableCount, worldCount, onStart }: LandingProps) {
   const [scrolled, setScrolled] = useState(false);
 
@@ -91,8 +40,6 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
   }, []);
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-
-  const timerLabel = settings.durationSeconds > 0 ? `${settings.durationSeconds / 60}-minute run` : 'untimed run';
 
   return (
     <div className="relative">
@@ -183,7 +130,7 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
         <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
           {[...TICKER, ...TICKER].map((c, i) => (
             <span key={i} className="flex items-center gap-3 px-6 text-[15px] font-light text-[#f5f5f1]/70 whitespace-nowrap">
-              <span className="text-xl">{c.flag}</span>
+              <Flag country={c} className="h-4 w-auto rounded-[2px]" />
               {c.name}
               <span className="text-[#275f4b]">✦</span>
             </span>
@@ -226,67 +173,26 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
 
       {/* ---------------- MODES (light mist section) ---------------- */}
       <section id="modes" className="relative z-10 bg-[#f5f5f1] text-[#1c2c26] px-6 md:px-12 py-24 md:py-36">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-20 items-start">
-          <Reveal className="lg:sticky lg:top-32">
-            <p className="text-[12px] uppercase tracking-[0.1em] text-[#275f4b] mb-4">Modes</p>
-            <h2 className="font-serif text-[44px] md:text-[72px] leading-[1.04] tracking-[-0.02em] text-balance">
-              Set your expedition.
-            </h2>
-            <p className="mt-6 text-[18px] md:text-[20px] leading-[1.5] font-light text-[#1c2c26]/70 max-w-md text-pretty">
-              Countries or capitals, the whole world or one region. Every run is shuffled from a fresh random seed,
-              so no two are the same.
+        <div className="max-w-6xl mx-auto">
+          <Reveal className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12 md:mb-16">
+            <div>
+              <p className="text-[12px] uppercase tracking-[0.1em] text-[#275f4b] mb-4">Modes</p>
+              <h2 className="font-serif text-[44px] md:text-[72px] leading-[1.04] tracking-[-0.02em] text-balance">
+                Pick your expedition.
+              </h2>
+            </div>
+            <p className="text-[18px] md:text-[20px] leading-[1.5] font-light text-[#1c2c26]/70 max-w-md text-pretty">
+              Choose a game, then shape the run. Every run is shuffled from a fresh random seed, so no two are the same.
             </p>
           </Reveal>
 
           <Reveal delay={120}>
-            <div className="rounded-3xl bg-white border border-[#1c2c26]/10 p-6 md:p-10 shadow-[0_30px_80px_-40px_rgba(28,44,38,0.45)] flex flex-col gap-8">
-              <Segmented
-                label="Quiz on"
-                value={settings.mode}
-                onChange={(mode) => onSettingsChange({ mode })}
-                options={[
-                  { value: 'countries', label: 'Country names' },
-                  { value: 'capitals', label: 'Capitals' },
-                ]}
-              />
-              <Segmented
-                label="Answer by"
-                value={settings.inputType}
-                onChange={(inputType) => onSettingsChange({ inputType })}
-                options={[
-                  { value: 'mcq', label: 'Multiple choice' },
-                  { value: 'type', label: 'Typing' },
-                ]}
-              />
-              <Segmented
-                label="Region"
-                value={settings.continent}
-                onChange={(continent) => onSettingsChange({ continent })}
-                options={REGIONS}
-              />
-              <Segmented
-                label="Clock"
-                value={settings.durationSeconds}
-                onChange={(durationSeconds) => onSettingsChange({ durationSeconds })}
-                options={DURATIONS}
-              />
-
-              <div className="pt-6 border-t border-[#1c2c26]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <p className="text-[15px] font-light text-[#1c2c26]/60">
-                  <span className="font-serif text-[28px] text-[#1c2c26] align-middle mr-1">{availableCount}</span>
-                  countries · {timerLabel}
-                </p>
-                <button
-                  onClick={() => onStart()}
-                  className="group flex items-center justify-center gap-2 pl-7 pr-2 py-2 rounded-full bg-[#1c2c26] text-[#f5f5f1] text-[16px] hover:bg-[#275f4b] transition-colors"
-                >
-                  Launch run
-                  <span className="w-10 h-10 rounded-full bg-[#e5ff42] text-[#1c2c26] flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
-                    <ArrowUpRight className="w-5 h-5" />
-                  </span>
-                </button>
-              </div>
-            </div>
+            <ModePicker
+              settings={settings}
+              onSettingsChange={onSettingsChange}
+              availableCount={availableCount}
+              onStart={() => onStart()}
+            />
           </Reveal>
         </div>
       </section>
@@ -319,6 +225,7 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
             <p className="text-[12px] uppercase tracking-[0.1em] text-[#628c7d] mb-1">Play</p>
             <button onClick={() => onStart({ mode: 'countries' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Countries</button>
             <button onClick={() => onStart({ mode: 'capitals' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Capitals</button>
+            <button onClick={() => onStart({ mode: 'flags' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Flags</button>
           </div>
           <div className="flex flex-col gap-3">
             <p className="text-[12px] uppercase tracking-[0.1em] text-[#628c7d] mb-1">Explore</p>

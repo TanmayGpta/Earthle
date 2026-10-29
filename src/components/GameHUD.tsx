@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
 import { answerFor, isCorrectAnswer, pickDistractors, shuffle } from '../lib/game';
+import { motion } from 'motion/react';
 import DecoCard from './DecoCard';
+import Flag from './Flag';
 import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, ChevronRight, MapPin } from 'lucide-react';
 
 interface GameHUDProps {
@@ -50,6 +52,13 @@ export default function GameHUD({
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const answeredCount = Object.values(answers).filter((a) => a.status !== 'skipped').length;
+  const isFlags = settings.mode === 'flags';
+
+  const prompt = {
+    countries: { label: 'Name the glowing country', placeholder: 'Type the country…' },
+    capitals: { label: 'Name the capital', placeholder: 'Type the capital…' },
+    flags: { label: 'Name the flag', placeholder: 'Type the country…' },
+  }[settings.mode];
 
   const later = (fn: () => void, ms: number) => {
     timeoutsRef.current.push(setTimeout(fn, ms));
@@ -221,7 +230,7 @@ export default function GameHUD({
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">{activeTrivia.country.flag}</span>
+                  <Flag country={activeTrivia.country} className="h-7 w-auto rounded-[2px]" />
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.1em] text-[#daba89] flex items-center gap-1">
                       <Lightbulb className="w-3.5 h-3.5" /> Did you know?
@@ -256,7 +265,7 @@ export default function GameHUD({
             <DecoCard cornerSize={26} className="shadow-2xl">
               <div className="p-5">
                 <div className="flex items-center gap-3">
-                  <span className="text-4xl">{hoveredCountry.flag}</span>
+                  <Flag country={hoveredCountry} className="h-9 w-auto rounded-[2px]" />
                   <div>
                     <p className="font-serif text-[24px] leading-tight">{hoveredCountry.name}</p>
                     <p className="text-[13px] font-light text-[#f5f5f1]/60">{hoveredCountry.capital}</p>
@@ -284,7 +293,7 @@ export default function GameHUD({
           <div className="pointer-events-auto max-w-md w-full animate-rise">
             <DecoCard cornerSize={48} className="shadow-2xl text-center">
               <div className="px-8 py-10">
-                <span className="text-6xl block mb-3">{revealedCountry.flag}</span>
+                <Flag country={revealedCountry} className="h-16 w-auto mx-auto mb-4 rounded-[3px] shadow-lg" />
                 <p className="text-[12px] uppercase tracking-[0.1em] text-[#daba89]">The answer was</p>
                 <h3 className="font-serif text-[44px] leading-[1.04] tracking-[-0.02em] mt-1">{revealedCountry.name}</h3>
                 <p className="mt-2 text-[15px] font-light text-[#f5f5f1]/60">
@@ -329,13 +338,32 @@ export default function GameHUD({
         <div className="w-full max-w-lg mx-auto pointer-events-auto">
           <DecoCard cornerSize={24} className="shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)]">
             <div className="px-4 py-4 md:px-5 flex flex-col items-center gap-3">
+              {/* Flags mode: the flag swings in on a 3D hinge each round */}
+              {isFlags && (
+                <div className="pt-1 [perspective:900px]">
+                  <motion.div
+                    key={targetCountry.code}
+                    initial={{ rotateY: -95, opacity: 0, scale: 0.9 }}
+                    animate={{ rotateY: 0, opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 160, damping: 17 }}
+                    style={{ transformOrigin: 'left center' }}
+                  >
+                    <Flag
+                      country={targetCountry}
+                      conceal
+                      className="h-28 md:h-36 w-auto max-w-[280px] md:max-w-[320px] object-contain rounded-[3px] ring-1 ring-black/30 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]"
+                    />
+                  </motion.div>
+                </div>
+              )}
+
               <div className="text-center">
-                <p className="text-[11px] uppercase tracking-[0.1em] text-[#daba89] mb-0.5">
-                  {settings.mode === 'countries' ? 'Name the glowing country' : 'Name the capital'}
-                </p>
+                <p className="text-[11px] uppercase tracking-[0.1em] text-[#daba89] mb-0.5">{prompt.label}</p>
                 <h2 key={targetCountry.code} className="font-serif text-[20px] md:text-[24px] leading-[1.15] tracking-[-0.01em] animate-rise [animation-duration:0.5s]">
                   {settings.mode === 'countries' ? (
                     'Which country is this?'
+                  ) : isFlags ? (
+                    'Whose flag is this?'
                   ) : (
                     <>
                       What is the capital of <span className="text-[#e5ff42]">{targetCountry.name}</span>?
@@ -351,7 +379,7 @@ export default function GameHUD({
                     type="text"
                     value={typedInput}
                     onChange={(e) => setTypedInput(e.target.value)}
-                    placeholder={settings.mode === 'countries' ? 'Type the country…' : 'Type the capital…'}
+                    placeholder={prompt.placeholder}
                     className="w-full bg-transparent px-4 py-2 text-[15px] text-[#1c2c26] placeholder-[#1c2c26]/40 focus:outline-none"
                   />
                   <button

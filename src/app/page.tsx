@@ -103,6 +103,16 @@ export default function EarthleHome() {
   // Target Country
   const targetCountry = countryQueue[currentCountryIndex] || null;
 
+  // Flags mode: the globe follows the last answered country instead of the (secret) target
+  const isFlags = settings.mode === 'flags';
+  const lastAnswered = useMemo(() => {
+    const latest = Object.values(answers)
+      .filter((a) => a.status !== 'skipped')
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
+    return latest ? countryQueue.find((c) => c.code === latest.countryCode) ?? null : null;
+  }, [answers, countryQueue]);
+  const globeFocus = isFlags ? lastAnswered : targetCountry;
+
   // Game clock: elapsed time always ticks, countdown only when timed
   useEffect(() => {
     if (!isPlaying || isGameOver || isReviewingAtlas) return;
@@ -215,13 +225,12 @@ export default function EarthleHome() {
       {isPlaying ? (
         <div className="fixed inset-0 z-40 bg-[#1c2c26]">
           {/* Interactive 3D WebGL Globe */}
-          {targetCountry && (
-            <InteractiveGlobe
-              targetCountry={targetCountry}
-              answers={answers}
-              onCountryHover={(country) => setHoveredCountry(country)}
-            />
-          )}
+          <InteractiveGlobe
+            targetCountry={globeFocus}
+            highlightTarget={!isFlags}
+            answers={answers}
+            onCountryHover={(country) => setHoveredCountry(country)}
+          />
 
           {/* In-Game HUD */}
           {targetCountry && !isGameOver && (
