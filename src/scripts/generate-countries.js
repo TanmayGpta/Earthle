@@ -8,11 +8,16 @@ const geo = JSON.parse(fs.readFileSync(geoPath, 'utf8'));
 
 function getGeoStats(geometry) {
   let minLng = 180, maxLng = -180, minLat = 90, maxLat = -90;
+  // Same bbox in 0..360 longitudes, for countries straddling the antimeridian (Fiji, Russia)
+  let minLng360 = 360, maxLng360 = 0;
   function process(c) {
     if (typeof c[0] === 'number') {
       const [lng, lat] = c;
+      const lng360 = lng < 0 ? lng + 360 : lng;
       if (lng < minLng) minLng = lng;
       if (lng > maxLng) maxLng = lng;
+      if (lng360 < minLng360) minLng360 = lng360;
+      if (lng360 > maxLng360) maxLng360 = lng360;
       if (lat < minLat) minLat = lat;
       if (lat > maxLat) maxLat = lat;
     } else {
@@ -20,8 +25,13 @@ function getGeoStats(geometry) {
     }
   }
   process(geometry.coordinates);
+  if (maxLng360 - minLng360 < maxLng - minLng) {
+    minLng = minLng360;
+    maxLng = maxLng360;
+  }
   const lat = (minLat + maxLat) / 2;
-  const lng = (minLng + maxLng) / 2;
+  let lng = (minLng + maxLng) / 2;
+  if (lng > 180) lng -= 360;
   const span = Math.max(maxLng - minLng, maxLat - minLat);
   let altitude = 1.4;
   if (span < 5) altitude = 0.8;

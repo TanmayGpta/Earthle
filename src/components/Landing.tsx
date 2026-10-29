@@ -333,7 +333,7 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
         </div>
 
         {/* Monumental wordmark */}
-        <h2 className="font-serif text-[24vw] leading-[0.75] tracking-[-0.04em] text-[#275f4b] text-center translate-y-[14%] mt-8 pointer-events-none">
+        <h2 className="font-serif text-[24vw] leading-[0.75] tracking-[-0.04em] text-[#275f4b] text-center translate-y-[5%] mt-8 pointer-events-none">
           Earthle
         </h2>
       </footer>

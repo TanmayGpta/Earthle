@@ -21,7 +21,7 @@ export default function EarthleHome() {
   // Settings
   const [settings, setSettings] = useState<GameSettings>({
     mode: 'countries',
-    inputType: 'mcq',
+    inputType: 'type',
     continent: 'all',
     durationSeconds: 900, // 15 mins default
   });

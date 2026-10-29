@@ -830,8 +830,8 @@ export const COUNTRIES: Country[] = [
     "flag": "🇫🇯",
     "continent": "Oceania",
     "lat": -17.15,
-    "lng": 0,
-    "altitude": 2.2,
+    "lng": 178.75,
+    "altitude": 0.8,
     "trivia": "Fiji consists of 332 volcanic islands, of which only 110 are permanently inhabited."
   },
   {
@@ -2064,7 +2064,7 @@ export const COUNTRIES: Country[] = [
     "flag": "🇷🇺",
     "continent": "Europe",
     "lat": 61.2,
-    "lng": 0,
+    "lng": 104.88,
     "altitude": 2.2,
     "trivia": "Russia covers 11 time zones and accounts for roughly one-eighth of Earth's inhabited land area."
   },
