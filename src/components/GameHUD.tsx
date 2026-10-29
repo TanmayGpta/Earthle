@@ -165,6 +165,9 @@ export default function GameHUD({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Flags mode on desktop: cards live in a narrow left column beside the map panel
+  const leftColumn = 'md:absolute md:left-5 md:top-1/2 md:-translate-y-1/2 md:w-[340px] md:max-w-none md:mx-0';
+
   const pill = 'bg-[#1c2c26]/90 backdrop-blur-md border border-[#daba89]/30 rounded-full shadow-xl';
 
   return (
@@ -261,7 +264,11 @@ export default function GameHUD({
         }[status];
 
         return (
-          <div className="pointer-events-none absolute top-20 left-4 md:left-6 w-72 z-30 animate-rise [animation-duration:0.4s]">
+          <div
+            className={`pointer-events-none absolute top-20 left-4 md:left-6 w-72 z-30 animate-rise [animation-duration:0.4s] ${
+              isFlags ? 'md:top-auto md:bottom-5 md:left-5 md:w-[340px]' : ''
+            }`}
+          >
             <DecoCard cornerSize={26} className="shadow-2xl">
               <div className="p-5">
                 <div className="flex items-center gap-3">
@@ -290,7 +297,7 @@ export default function GameHUD({
       {/* Center: Reveal card & feedback */}
       <div className="w-full flex flex-col items-center justify-center my-auto px-4">
         {revealedCountry ? (
-          <div className="pointer-events-auto max-w-md w-full animate-rise">
+          <div className={`pointer-events-auto max-w-md w-full animate-rise ${isFlags ? leftColumn : ''}`}>
             <DecoCard cornerSize={48} className="shadow-2xl text-center">
               <div className="px-8 py-10">
                 <Flag country={revealedCountry} className="h-16 w-auto mx-auto mb-4 rounded-[3px] shadow-lg" />
@@ -335,7 +342,7 @@ export default function GameHUD({
 
       {/* Bottom Question Card (Hidden when an answer is actively revealed) */}
       {!revealedCountry && (
-        <div className="w-full max-w-lg mx-auto pointer-events-auto">
+        <div className={`w-full max-w-lg mx-auto pointer-events-auto ${isFlags ? leftColumn : ''}`}>
           <DecoCard cornerSize={24} className="shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)]">
             <div className="px-4 py-4 md:px-5 flex flex-col items-center gap-3">
               {/* Flags mode: the flag swings in on a 3D hinge each round */}
@@ -351,7 +358,7 @@ export default function GameHUD({
                     <Flag
                       country={targetCountry}
                       conceal
-                      className="h-28 md:h-36 w-auto max-w-[280px] md:max-w-[320px] object-contain rounded-[3px] ring-1 ring-black/30 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]"
+                      className="h-28 md:h-36 w-auto max-w-[280px] md:max-w-[300px] object-contain rounded-[3px] ring-1 ring-black/30 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.7)]"
                     />
                   </motion.div>
                 </div>
@@ -392,7 +399,7 @@ export default function GameHUD({
                 </div>
               ) : (
                 /* MCQ: light pills on the dark card for contrast */
-                <div key={targetCountry.code} className="w-full grid grid-cols-2 gap-2">
+                <div key={targetCountry.code} className={`w-full grid grid-cols-2 gap-2 ${isFlags ? 'md:grid-cols-1' : ''}`}>
                   {mcqOptions.map((option, index) => (
                     <button
                       key={option}

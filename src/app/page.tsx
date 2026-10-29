@@ -11,6 +11,7 @@ import Landing from '../components/Landing';
 // Dynamic import for 3D Globe components to prevent SSR issues
 const HeroGlobe = dynamic(() => import('../components/HeroGlobe'), { ssr: false });
 const InteractiveGlobe = dynamic(() => import('../components/InteractiveGlobe'), { ssr: false });
+const FlatMap = dynamic(() => import('../components/FlatMap'), { ssr: false });
 
 export default function EarthleHome() {
   // Game state
@@ -103,7 +104,7 @@ export default function EarthleHome() {
   // Target Country
   const targetCountry = countryQueue[currentCountryIndex] || null;
 
-  // Flags mode: the globe follows the last answered country instead of the (secret) target
+  // Flags mode uses the flat map; it marks the last answered country (the target stays secret)
   const isFlags = settings.mode === 'flags';
   const lastAnswered = useMemo(() => {
     const latest = Object.values(answers)
@@ -111,7 +112,6 @@ export default function EarthleHome() {
       .sort((a, b) => b.timestamp - a.timestamp)[0];
     return latest ? countryQueue.find((c) => c.code === latest.countryCode) ?? null : null;
   }, [answers, countryQueue]);
-  const globeFocus = isFlags ? lastAnswered : targetCountry;
 
   // Game clock: elapsed time always ticks, countdown only when timed
   useEffect(() => {
@@ -225,12 +225,22 @@ export default function EarthleHome() {
       {isPlaying ? (
         <div className="fixed inset-0 z-40 bg-[#1c2c26]">
           {/* Interactive 3D WebGL Globe */}
-          <InteractiveGlobe
-            targetCountry={globeFocus}
-            highlightTarget={!isFlags}
-            answers={answers}
-            onCountryHover={(country) => setHoveredCountry(country)}
-          />
+          {isFlags ? (
+            // Split screen: map panel right of the flag card (desktop), above it (mobile)
+            <div className="absolute inset-x-0 top-0 bottom-[44%] md:bottom-0 md:left-[380px] md:border-l border-[#275f4b]/50">
+              <FlatMap
+                answers={answers}
+                focusCountry={lastAnswered}
+                onCountryHover={(country) => setHoveredCountry(country)}
+              />
+            </div>
+          ) : (
+            <InteractiveGlobe
+              targetCountry={targetCountry}
+              answers={answers}
+              onCountryHover={(country) => setHoveredCountry(country)}
+            />
+          )}
 
           {/* In-Game HUD */}
           {targetCountry && !isGameOver && (
