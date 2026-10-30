@@ -11,6 +11,7 @@ const CAPITAL_ALIASES: Record<string, string[]> = {
   LKA: ['Kotte', 'Colombo'],
   BOL: ['La Paz'],
   ZAF: ['Cape Town', 'Bloemfontein'],
+  GNQ: ['Malabo', 'Oyala'],
 };
 
 // Lowercase, strip accents/punctuation, collapse whitespace, drop a leading "the"
@@ -62,6 +63,31 @@ export const isCorrectAnswer = (country: Country, mode: GameMode, input: string)
   }
 
   return false;
+};
+
+// Blitz matches on every keystroke, so only whole names count (shorthand would fire on "united").
+// `waiting` holds a match back while the input could still become a longer name: "niger" -> "nigeria",
+// "us" -> "usa". The player presses Enter to lock it in.
+export const matchBlitz = (input: string, remaining: Country[]) => {
+  const query = compact(input);
+  const names = (c: Country) => [c.name, ...c.aliases].map(compact);
+  const exact = query ? remaining.filter((c) => names(c).includes(query)) : [];
+  if (!exact.length) return { match: null, waiting: false };
+
+  const waiting = remaining.some(
+    (c) =>
+      (!exact.includes(c) || query.length < 3) &&
+      names(c).some((n) => n !== query && n.startsWith(query))
+  );
+  return { match: exact[0], waiting };
+};
+
+// Enter in Blitz: the whole-name match, or shorthand ("trinidad") if it points at one country only
+export const resolveBlitzEnter = (input: string, remaining: Country[]) => {
+  const { match } = matchBlitz(input, remaining);
+  if (match) return match;
+  const hits = remaining.filter((c) => isCorrectAnswer(c, 'blitz', input));
+  return hits.length === 1 ? hits[0] : null;
 };
 
 // 'Americas' covers both North and South America in the data

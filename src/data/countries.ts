@@ -627,7 +627,6 @@ export const COUNTRIES: Country[] = [
     "name": "Czechia",
     "aliases": [
       "Czechia",
-      "Czech Republic",
       "Czech Republic"
     ],
     "capital": "Prague",
@@ -636,7 +635,7 @@ export const COUNTRIES: Country[] = [
     "lat": 49.84,
     "lng": 15.55,
     "altitude": 1.1,
-    "trivia": "The Czech Republic drinks more beer per capita than any other nation in the world."
+    "trivia": "Czechia drinks more beer per capita than any other nation in the world."
   },
   {
     "code": "DEU",
@@ -982,7 +981,7 @@ export const COUNTRIES: Country[] = [
       "Equatorial Guinea",
       "Republic of Equatorial Guinea"
     ],
-    "capital": "Malabo",
+    "capital": "Ciudad de la Paz",
     "flag": "🇬🇶",
     "continent": "Africa",
     "lat": 1.65,
@@ -1576,8 +1575,10 @@ export const COUNTRIES: Country[] = [
   },
   {
     "code": "MKD",
-    "name": "Macedonia",
+    "name": "North Macedonia",
     "aliases": [
+      "North Macedonia",
+      "Republic of North Macedonia",
       "Macedonia",
       "Former Yugoslav Republic of Macedonia"
     ],
@@ -1609,7 +1610,8 @@ export const COUNTRIES: Country[] = [
     "name": "Myanmar",
     "aliases": [
       "Myanmar",
-      "Republic of the Union of Myanmar"
+      "Republic of the Union of Myanmar",
+      "Burma"
     ],
     "capital": "Naypyidaw",
     "flag": "🇲🇲",
@@ -2312,8 +2314,10 @@ export const COUNTRIES: Country[] = [
   },
   {
     "code": "SWZ",
-    "name": "Swaziland",
+    "name": "Eswatini",
     "aliases": [
+      "Eswatini",
+      "Kingdom of Eswatini",
       "Swaziland",
       "Kingdom of Swaziland"
     ],
@@ -2419,7 +2423,8 @@ export const COUNTRIES: Country[] = [
     "name": "Timor-Leste",
     "aliases": [
       "Timor-Leste",
-      "Democratic Republic of Timor-Leste"
+      "Democratic Republic of Timor-Leste",
+      "East Timor"
     ],
     "capital": "Dili",
     "flag": "🇹🇱",
@@ -2427,7 +2432,7 @@ export const COUNTRIES: Country[] = [
     "lat": -8.83,
     "lng": 126.15,
     "altitude": 0.8,
-    "trivia": "East Timor gained independence in 2002, becoming the first newly sovereign nation of the 21st century in Asia."
+    "trivia": "Timor-Leste gained independence in 2002, becoming the first newly sovereign nation of the 21st century in Asia."
   },
   {
     "code": "TTO",
@@ -2461,8 +2466,10 @@ export const COUNTRIES: Country[] = [
   },
   {
     "code": "TUR",
-    "name": "Turkey",
+    "name": "Türkiye",
     "aliases": [
+      "Türkiye",
+      "Republic of Türkiye",
       "Turkey",
       "Republic of Turkey"
     ],
@@ -2472,7 +2479,7 @@ export const COUNTRIES: Country[] = [
     "lat": 38.98,
     "lng": 35.42,
     "altitude": 1.5,
-    "trivia": "Istanbul in Turkey is the only city in the world situated on two continents (Europe and Asia)."
+    "trivia": "Istanbul in Türkiye is the only city in the world situated on two continents (Europe and Asia)."
   },
   {
     "code": "TWN",

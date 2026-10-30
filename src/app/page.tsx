@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
 import { getCountryPool, createRng, newSeed, shuffle } from '../lib/game';
 import GameHUD from '../components/GameHUD';
+import BlitzHUD from '../components/BlitzHUD';
 import GameOverModal from '../components/GameOverModal';
 import Landing from '../components/Landing';
 
@@ -44,6 +45,7 @@ export default function EarthleHome() {
   const [hoveredCountry, setHoveredCountry] = useState<Country | null>(null);
   const [activeTrivia, setActiveTrivia] = useState<ActiveTrivia | null>(null);
   const [revealedCountry, setRevealedCountry] = useState<Country | null>(null);
+  const [showMissing, setShowMissing] = useState(false);
 
   // Track scroll on landing page (with staged choreography)
   useEffect(() => {
@@ -104,8 +106,20 @@ export default function EarthleHome() {
   // Target Country
   const targetCountry = countryQueue[currentCountryIndex] || null;
 
-  // Flags mode uses the flat map; it marks the last answered country (the target stays secret)
-  const isFlags = settings.mode === 'flags';
+  // Flags and Blitz use the flat map; it marks the last answered country (the target stays secret)
+  const isBlitz = settings.mode === 'blitz';
+  const usesMap = settings.mode === 'flags' || isBlitz;
+
+  // Once a Blitz run ends, whatever wasn't named counts as missed (red on the map)
+  const finalAnswers = useMemo(() => {
+    if (!isBlitz || (!isGameOver && !isReviewingAtlas)) return answers;
+    const all = { ...answers };
+    for (const c of countryQueue) {
+      all[c.code] ??= { countryCode: c.code, status: 'revealed', attempts: 0, timestamp: 0 };
+    }
+    return all;
+  }, [isBlitz, isGameOver, isReviewingAtlas, answers, countryQueue]);
+
   const lastAnswered = useMemo(() => {
     const latest = Object.values(answers)
       .filter((a) => a.status !== 'skipped')
@@ -212,6 +226,23 @@ export default function EarthleHome() {
     advanceToNext();
   };
 
+  // Blitz hint: everything still unnamed glows for 2 seconds
+  const handleShowMissing = () => {
+    if (showMissing) return;
+    setShowMissing(true);
+    setTimeout(() => setShowMissing(false), 2000);
+  };
+  const glowing = useMemo(
+    () => (isBlitz && showMissing && !isGameOver && !isReviewingAtlas ? countryQueue.filter((c) => !answers[c.code]) : []),
+    [isBlitz, showMissing, isGameOver, isReviewingAtlas, countryQueue, answers]
+  );
+
+  // Blitz: any country, any order; naming the last one ends the run
+  const handleBlitzFound = (country: Country) => {
+    recordAnswer(country.code, 'correct');
+    if (Object.keys(answers).length + 1 >= countryQueue.length) setIsGameOver(true);
+  };
+
   // Exit Game
   const handleExit = () => {
     setIsPlaying(false);
@@ -225,13 +256,15 @@ export default function EarthleHome() {
       {isPlaying ? (
         <div className="fixed inset-0 z-40 bg-[#1c2c26]">
           {/* Interactive 3D WebGL Globe */}
-          {isFlags ? (
-            // Split screen: map panel right of the flag card (desktop), above it (mobile)
+          {usesMap ? (
+            // Split screen: map panel right of the game panel (desktop), above it (mobile)
             <div className="absolute inset-x-0 top-0 bottom-[44%] md:bottom-0 md:left-[380px] md:border-l border-[#275f4b]/50">
               <FlatMap
-                answers={answers}
+                answers={finalAnswers}
                 focusCountry={lastAnswered}
                 onCountryHover={(country) => setHoveredCountry(country)}
+                darkBorders={isBlitz}
+                glowing={glowing}
               />
             </div>
           ) : (
@@ -243,7 +276,22 @@ export default function EarthleHome() {
           )}
 
           {/* In-Game HUD */}
-          {targetCountry && !isGameOver && (
+          {isBlitz && !isGameOver && (
+            <BlitzHUD
+              settings={settings}
+              countries={countryQueue}
+              answers={finalAnswers}
+              timeLeft={timeLeft}
+              hoveredCountry={hoveredCountry}
+              reviewing={isReviewingAtlas}
+              showingMissing={showMissing}
+              onShowMissing={handleShowMissing}
+              onFound={handleBlitzFound}
+              onFinish={() => setIsGameOver(true)}
+              onExit={handleExit}
+            />
+          )}
+          {!isBlitz && targetCountry && !isGameOver && (
             <GameHUD
               settings={settings}
               targetCountry={targetCountry}
@@ -267,7 +315,7 @@ export default function EarthleHome() {
           {isGameOver && (
             <GameOverModal
               settings={settings}
-              answers={answers}
+              answers={finalAnswers}
               totalCountries={countryQueue.length}
               runSeed={runSeed}
               maxStreak={maxStreak}

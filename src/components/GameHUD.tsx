@@ -58,6 +58,7 @@ export default function GameHUD({
     countries: { label: 'Name the glowing country', placeholder: 'Type the country…' },
     capitals: { label: 'Name the capital', placeholder: 'Type the capital…' },
     flags: { label: 'Name the flag', placeholder: 'Type the country…' },
+    blitz: { label: 'Name every country', placeholder: 'Type the country…' }, // Blitz renders BlitzHUD instead
   }[settings.mode];
 
   const later = (fn: () => void, ms: number) => {

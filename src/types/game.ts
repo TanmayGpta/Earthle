@@ -11,7 +11,7 @@ export interface Country {
   trivia: string;
 }
 
-export type GameMode = 'countries' | 'capitals' | 'flags';
+export type GameMode = 'countries' | 'capitals' | 'flags' | 'blitz';
 export type InputType = 'type' | 'mcq';
 export type GameStatus = 'landing' | 'playing' | 'gameover';
 

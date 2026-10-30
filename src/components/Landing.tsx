@@ -226,6 +226,7 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
             <button onClick={() => onStart({ mode: 'countries' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Countries</button>
             <button onClick={() => onStart({ mode: 'capitals' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Capitals</button>
             <button onClick={() => onStart({ mode: 'flags' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Flags</button>
+            <button onClick={() => onStart({ mode: 'blitz' })} className="text-left text-[#f5f5f1]/80 hover:text-[#e5ff42]">Blitz</button>
           </div>
           <div className="flex flex-col gap-3">
             <p className="text-[12px] uppercase tracking-[0.1em] text-[#628c7d] mb-1">Explore</p>

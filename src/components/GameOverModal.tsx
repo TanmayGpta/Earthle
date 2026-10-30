@@ -67,8 +67,15 @@ export default function GameOverModal({
     return `${m}m ${s}s`;
   };
 
+  // Blitz has no wrong answers or streaks: it reports pace and what was missed
+  const isBlitz = settings.mode === 'blitz';
+  const usesMap = isBlitz || settings.mode === 'flags';
+  const perMinute = timeSpentSeconds > 0 ? Math.round((correctCount / timeSpentSeconds) * 60) : 0;
+
   const handleShare = () => {
-    const text = `🌍 Earthle Run Finished!\nMode: ${settings.mode.toUpperCase()} (${settings.inputType.toUpperCase()})\nScore: ${correctCount}/${totalCountries} (${accuracy}% accuracy)
+    const text = isBlitz
+      ? `🌍 Earthle Blitz!\nFound: ${correctCount}/${totalCountries} in ${formatTime(timeSpentSeconds)}\nPace: ⚡ ${perMinute} per minute\nRun: #${formatSeed(runSeed)}\nRank: ${rank}\nPlay at earthle.vercel.app`
+      : `🌍 Earthle Run Finished!\nMode: ${settings.mode.toUpperCase()} (${settings.inputType.toUpperCase()})\nScore: ${correctCount}/${totalCountries} (${accuracy}% accuracy)
 Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPlay at earthle.vercel.app`;
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -113,10 +120,10 @@ Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPla
             <div className="w-px h-8 bg-[#275f4b]/60" />
             <div>
               <p className="text-3xl font-bold text-[#e5ff42] flex items-center justify-center gap-1">
-                <Flame className="w-5 h-5 fill-[#e5ff42]/30" />
-                {maxStreak}
+                {!isBlitz && <Flame className="w-5 h-5 fill-[#e5ff42]/30" />}
+                {isBlitz ? perMinute : maxStreak}
               </p>
-              <p className="text-[10px] text-[#628c7d] uppercase tracking-wider mt-0.5">Streak</p>
+              <p className="text-[10px] text-[#628c7d] uppercase tracking-wider mt-0.5">{isBlitz ? 'Per min' : 'Streak'}</p>
             </div>
           </div>
 
@@ -128,7 +135,7 @@ Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPla
             </div>
             <div className="p-2.5 bg-[#0e1814]/80 border border-[#275f4b]/40">
               <span className="text-[#f87171] font-bold block text-sm">{revealedCount}</span>
-              <span className="text-[10px] text-[#628c7d]">REVEALED</span>
+              <span className="text-[10px] text-[#628c7d]">{isBlitz ? 'MISSED' : 'REVEALED'}</span>
             </div>
             <div className="p-2.5 bg-[#0e1814]/80 border border-[#275f4b]/40">
               <span className="text-[#628c7d] font-bold block text-sm">{formatTime(timeSpentSeconds)}</span>
@@ -152,7 +159,7 @@ Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPla
                 className="py-3 bg-[#0e1814]/90 border border-[#275f4b]/80 hover:border-[#628c7d] text-xs font-mono uppercase tracking-wider font-semibold text-[#f5f5f1] flex items-center justify-center gap-2 transition-all"
               >
                 <Globe className="w-4 h-4 text-[#628c7d]" />
-                <span>Review 3D Globe</span>
+                <span>{usesMap ? 'Review Map' : 'Review 3D Globe'}</span>
               </button>
 
               <button

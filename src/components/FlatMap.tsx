@@ -13,7 +13,14 @@ interface FlatMapProps {
   // Country to mark with a pulsing ring (small islands are invisible at world zoom)
   focusCountry: Country | null;
   onCountryHover: (country: Country | null) => void;
+  // Black borders, for when most of the map is filled in bright green (Blitz)
+  darkBorders?: boolean;
+  // Countries to light up right now (Blitz hint)
+  glowing?: Country[];
 }
+
+// Below this on-screen area (px²) a lit country is too small to spot, so it also gets a beacon
+const BEACON_MAX_AREA = 150;
 
 type View = { k: number; x: number; y: number; ms: number };
 
@@ -33,7 +40,7 @@ const STATUS_FILL: Record<AnswerRecord['status'], string> = {
 };
 
 // Static world map with wheel/drag/pinch zoom. Same palette as the globe.
-export default function FlatMap({ answers, focusCountry, onCountryHover }: FlatMapProps) {
+export default function FlatMap({ answers, focusCountry, onCountryHover, darkBorders = false, glowing = [] }: FlatMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -72,7 +79,7 @@ export default function FlatMap({ answers, focusCountry, onCountryHover }: FlatM
     const projection = geoNaturalEarth1().fitExtent([[PAD, PAD_TOP], [w - PAD, h - PAD]], land);
     const path = geoPath(projection);
     return {
-      paths: features.map((f) => ({ code: featCode(f), d: path(f) ?? '' })),
+      paths: features.map((f) => ({ code: featCode(f), d: path(f) ?? '', area: path.area(f) })),
       project: projection,
       graticule: path(geoGraticule10()) ?? '',
       bounds: path.bounds(land),
@@ -167,6 +174,14 @@ export default function FlatMap({ answers, focusCountry, onCountryHover }: FlatM
   };
 
   const focusPoint = focusCountry && project ? project([focusCountry.lng, focusCountry.lat]) : null;
+  const glowCodes = new Set(glowing.map((c) => c.code));
+  const areaOf = new Map(paths.map((p) => [p.code, p.area]));
+  const beacons = project
+    ? glowing.flatMap((c) => {
+        const point = project([c.lng, c.lat]);
+        return point && (areaOf.get(c.code) ?? 0) * view.k * view.k < BEACON_MAX_AREA ? [{ code: c.code, point }] : [];
+      })
+    : [];
   const center = () => [size.w / 2, size.h / 2] as const;
   const btn =
     'w-10 h-10 flex items-center justify-center rounded-full bg-[#1c2c26]/90 backdrop-blur-md border border-[#daba89]/30 text-[#f5f5f1] hover:border-[#e5ff42]/60 hover:text-[#e5ff42] transition-colors disabled:opacity-30 disabled:pointer-events-none';
@@ -198,15 +213,30 @@ export default function FlatMap({ answers, focusCountry, onCountryHover }: FlatM
               <path
                 key={code}
                 d={d}
-                fill={status ? STATUS_FILL[status] : isHovered ? '#33574a' : '#274137'}
-                stroke={isHovered ? '#ffffff' : 'rgba(245, 245, 241, 0.25)'}
-                strokeWidth={isHovered ? 1.2 : 0.6}
+                fill={status ? STATUS_FILL[status] : glowCodes.has(code) ? '#e5ff42' : isHovered ? '#33574a' : '#274137'}
+                stroke={isHovered ? '#ffffff' : darkBorders ? 'rgba(0, 0, 0, 0.85)' : 'rgba(245, 245, 241, 0.25)'}
+                strokeWidth={isHovered ? 1.2 : darkBorders ? 0.8 : 0.6}
                 vectorEffect="non-scaling-stroke"
                 onPointerEnter={() => hover(code)}
                 style={{ transition: 'fill 400ms ease' }}
               />
             );
           })}
+
+          {/* Beacons on lit countries too small to see, sized in screen pixels */}
+          {beacons.map(({ code, point }) => (
+            <g key={code} transform={`translate(${point[0]} ${point[1]}) scale(${1 / view.k})`} pointerEvents="none">
+              <motion.circle
+                fill="none"
+                stroke="#e5ff42"
+                strokeWidth={1.5}
+                initial={{ r: 3, opacity: 1 }}
+                animate={{ r: 14, opacity: 0 }}
+                transition={{ duration: 1, ease: 'easeOut', repeat: Infinity }}
+              />
+              <circle r={3} fill="#e5ff42" />
+            </g>
+          ))}
 
           {/* One-second ping on the latest answer, sized in screen pixels, then gone */}
           {focusPoint && (

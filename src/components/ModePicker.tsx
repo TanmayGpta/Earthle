@@ -9,7 +9,7 @@ import {
   useSpring,
   useTransform,
 } from 'motion/react';
-import { ArrowUpRight, ChevronDown, Swords, Timer } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Swords } from 'lucide-react';
 import { Country, GameMode, GameSettings, InputType } from '../types/game';
 import { COUNTRIES } from '../data/countries';
 import Flag from './Flag';
@@ -19,7 +19,7 @@ type MainMode = 'atlas' | 'flags' | 'blitz' | 'duel';
 const MAIN_MODES: { id: MainMode; title: string; kicker: string; body: string; soon?: boolean }[] = [
   { id: 'atlas', title: 'Atlas', kicker: 'The globe', body: 'A country glows on the globe. Name it, or its capital.' },
   { id: 'flags', title: 'Flags', kicker: 'Vexillology', body: 'A flag swings into view. Tell us whose it is.' },
-  { id: 'blitz', title: 'Blitz', kicker: 'Speed run', body: 'One clock. Name as many countries as you can.', soon: true },
+  { id: 'blitz', title: 'Blitz', kicker: 'Speed run', body: 'One clock. Type every country you know and watch the map light up.' },
   { id: 'duel', title: 'Duel', kicker: 'Head to head', body: 'Share a code. Same countries, same clock. Fastest wins.', soon: true },
 ];
 
@@ -50,7 +50,7 @@ const CLOCKS: Option<number>[] = [
 const byCode = (code: string) => COUNTRIES.find((c) => c.code === code) as Country;
 const FAN = ['JPN', 'BRA', 'SWE'].map(byCode);
 
-const mainModeOf = (mode: GameMode): MainMode => (mode === 'flags' ? 'flags' : 'atlas');
+const mainModeOf = (mode: GameMode): MainMode => (mode === 'flags' || mode === 'blitz' ? mode : 'atlas');
 
 /* ---------------- Card art ---------------- */
 
@@ -108,10 +108,28 @@ function FlagsArt() {
   );
 }
 
+// Stopwatch whose hand sweeps round
+function BlitzArt() {
+  return (
+    <svg viewBox="-50 -50 100 100" className="w-28 h-28" fill="none" stroke="currentColor" strokeWidth={1.2}>
+      <circle cy={6} r={38} />
+      <path d="M-8 -42 H8 M0 -42 V-32" />
+      {[0, 1, 2, 3].map((i) => (
+        <line key={i} y1={-32} y2={-27} transform={`translate(0 6) rotate(${i * 90})`} opacity={0.5} />
+      ))}
+      <g transform="translate(0 6)">
+        <line y2={-26} stroke="#e5ff42" strokeWidth={2} strokeLinecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4s" repeatCount="indefinite" />
+        </line>
+      </g>
+    </svg>
+  );
+}
+
 const ART: Record<MainMode, React.ReactNode> = {
   atlas: <AtlasArt />,
   flags: <FlagsArt />,
-  blitz: <Timer className="w-20 h-20" strokeWidth={1} />,
+  blitz: <BlitzArt />,
   duel: <Swords className="w-20 h-20" strokeWidth={1} />,
 };
 
@@ -290,7 +308,7 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
 
   const selectMain = (id: MainMode) => {
     setOpenId(null);
-    onSettingsChange({ mode: id === 'flags' ? 'flags' : atlasTopic.current });
+    onSettingsChange({ mode: id === 'flags' || id === 'blitz' ? id : atlasTopic.current });
   };
 
   const chip = { openId, setOpenId };
@@ -358,10 +376,9 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="font-serif text-[30px] md:text-[46px] leading-[1.35] tracking-[-0.01em] text-[#1c2c26] text-balance"
           >
-            Name the{' '}
-            {mainMode === 'flags' ? (
-              'flags'
-            ) : (
+            {mainMode === 'blitz' ? 'Name every country' : 'Name the'}{' '}
+            {mainMode === 'flags' && 'flags'}
+            {mainMode === 'atlas' && (
               <Chip
                 id="topic"
                 {...chip}
@@ -373,8 +390,13 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
                 }}
               />
             )}{' '}
-            of <Chip id="region" {...chip} value={settings.continent} options={REGIONS} onChange={(continent) => onSettingsChange({ continent })} />{' '}
-            by <Chip id="input" {...chip} value={settings.inputType} options={INPUTS} onChange={(inputType) => onSettingsChange({ inputType })} />,{' '}
+            of <Chip id="region" {...chip} value={settings.continent} options={REGIONS} onChange={(continent) => onSettingsChange({ continent })} />
+            {mainMode !== 'blitz' && (
+              <>
+                {' '}by <Chip id="input" {...chip} value={settings.inputType} options={INPUTS} onChange={(inputType) => onSettingsChange({ inputType })} />
+              </>
+            )}
+            ,{' '}
             <Chip id="clock" {...chip} value={settings.durationSeconds} options={CLOCKS} onChange={(durationSeconds) => onSettingsChange({ durationSeconds })} />.
           </motion.div>
         </AnimatePresence>
