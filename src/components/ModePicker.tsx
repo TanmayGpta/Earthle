@@ -12,15 +12,17 @@ import {
 import { ArrowUpRight, ChevronDown, Swords } from 'lucide-react';
 import { Country, GameMode, GameSettings, InputType } from '../types/game';
 import { COUNTRIES } from '../data/countries';
+import { getCountryPool } from '../lib/game';
+import { cleanCode, DuelConfig, DuelOrder, isFullCode } from '../lib/useDuel';
 import Flag from './Flag';
 
 type MainMode = 'atlas' | 'flags' | 'blitz' | 'duel';
 
-const MAIN_MODES: { id: MainMode; title: string; kicker: string; body: string; soon?: boolean }[] = [
+const MAIN_MODES: { id: MainMode; title: string; kicker: string; body: string }[] = [
   { id: 'atlas', title: 'Atlas', kicker: 'The globe', body: 'A country glows on the globe. Name it, or its capital.' },
   { id: 'flags', title: 'Flags', kicker: 'Vexillology', body: 'A flag swings into view. Tell us whose it is.' },
   { id: 'blitz', title: 'Blitz', kicker: 'Speed run', body: 'One clock. Type every country you know and watch the map light up.' },
-  { id: 'duel', title: 'Duel', kicker: 'Head to head', body: 'Share a code. Same countries, same clock. Fastest wins.', soon: true },
+  { id: 'duel', title: 'Duel', kicker: 'Head to head', body: 'Share a code. Same start, same 15-minute clock. Most correct wins.' },
 ];
 
 type Option<T> = { value: T; label: string };
@@ -29,7 +31,7 @@ const TOPICS: Option<GameMode>[] = [
   { value: 'countries', label: 'countries' },
   { value: 'capitals', label: 'capitals' },
 ];
-const REGIONS: Option<string>[] = [
+export const REGIONS: Option<string>[] = [
   { value: 'all', label: 'the World' },
   { value: 'Africa', label: 'Africa' },
   { value: 'Americas', label: 'the Americas' },
@@ -37,9 +39,19 @@ const REGIONS: Option<string>[] = [
   { value: 'Europe', label: 'Europe' },
   { value: 'Oceania', label: 'Oceania' },
 ];
-const INPUTS: Option<InputType>[] = [
+export const INPUTS: Option<InputType>[] = [
   { value: 'type', label: 'typing' },
   { value: 'mcq', label: 'multiple choice' },
+];
+export const DUEL_MODES: Option<GameMode>[] = [
+  { value: 'countries', label: 'Atlas countries' },
+  { value: 'capitals', label: 'Atlas capitals' },
+  { value: 'flags', label: 'Flags' },
+  { value: 'blitz', label: 'Blitz' },
+];
+export const ORDERS: Option<DuelOrder>[] = [
+  { value: 'same', label: 'the same order' },
+  { value: 'random', label: 'a different order each' },
 ];
 const CLOCKS: Option<number>[] = [
   { value: 300, label: 'in 5 minutes' },
@@ -192,8 +204,29 @@ function TiltCard({
 
 /* ---------------- Sentence chip ---------------- */
 
+// Which chip is open; closes on outside click or Escape
+export function useChipMenu() {
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openId) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target as Element).closest('[data-chip]')) setOpenId(null);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpenId(null);
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openId]);
+
+  return { openId, setOpenId };
+}
+
 // An inline word in the setup sentence that opens a small option list
-function Chip<T extends string | number>({
+export function Chip<T extends string | number>({
   id,
   openId,
   setOpenId,
@@ -276,6 +309,92 @@ function Chip<T extends string | number>({
   );
 }
 
+/* ---------------- Duel setup ---------------- */
+
+// Create a duel (same sentence style as a run), or join one with a code
+function DuelSetup({
+  chip,
+  error,
+  onCreate,
+  onJoin,
+}: {
+  chip: ReturnType<typeof useChipMenu>;
+  error: string | null;
+  onCreate: (settings: Pick<DuelConfig, 'mode' | 'continent' | 'order'>) => void;
+  onJoin: (code: string) => void;
+}) {
+  const [mode, setMode] = useState<GameMode>('countries');
+  const [continent, setContinent] = useState('all');
+  const [order, setOrder] = useState<DuelOrder>('same');
+  const [code, setCode] = useState('');
+  const count = getCountryPool({ mode, continent }).length;
+
+  return (
+    <div className="mt-5 rounded-3xl bg-white border border-[#1c2c26]/10 p-6 md:p-10 shadow-[0_30px_80px_-40px_rgba(28,44,38,0.45)]">
+      <p className="text-[12px] uppercase tracking-[0.1em] text-[#628c7d] mb-4">Your duel · tap a word to change it</p>
+
+      <div className="font-serif text-[30px] md:text-[46px] leading-[1.35] tracking-[-0.01em] text-[#1c2c26] text-balance">
+        A 15-minute duel on <Chip id="duel-mode" {...chip} value={mode} options={DUEL_MODES} onChange={setMode} /> of{' '}
+        <Chip id="duel-region" {...chip} value={continent} options={REGIONS} onChange={setContinent} />
+        {mode !== 'blitz' && (
+          <>
+            , in <Chip id="duel-order" {...chip} value={order} options={ORDERS} onChange={setOrder} />
+          </>
+        )}
+        .
+      </div>
+
+      <div className="mt-8 pt-6 border-t border-[#1c2c26]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <p className="text-[15px] font-light text-[#1c2c26]/60">
+          <span className="font-serif text-[28px] text-[#1c2c26] align-middle mr-1">{count}</span>
+          {mode === 'flags' ? 'flags' : mode === 'capitals' ? 'capitals' : 'countries'} in this duel
+        </p>
+        <button
+          onClick={() => onCreate({ mode, continent, order })}
+          className="group flex items-center justify-center gap-2 pl-7 pr-2 py-2 rounded-full bg-[#1c2c26] text-[#f5f5f1] text-[16px] hover:bg-[#275f4b] transition-colors"
+        >
+          Create duel
+          <span className="w-10 h-10 rounded-full bg-[#e5ff42] text-[#1c2c26] flex items-center justify-center transition-transform duration-300 group-hover:rotate-45">
+            <ArrowUpRight className="w-5 h-5" />
+          </span>
+        </button>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (isFullCode(code)) onJoin(code);
+        }}
+        className="mt-6 pt-6 border-t border-[#1c2c26]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
+        <label htmlFor="duel-code" className="text-[15px] font-light text-[#1c2c26]/60">
+          Got a code from a friend?
+        </label>
+        <div className="flex items-center rounded-full bg-[#1c2c26]/5 p-1">
+          <input
+            id="duel-code"
+            value={code}
+            onChange={(e) => setCode(cleanCode(e.target.value))}
+            placeholder="CODE"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-28 bg-transparent px-4 py-2 text-[16px] tracking-[0.15em] text-[#1c2c26] placeholder-[#1c2c26]/30 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!isFullCode(code)}
+            className="px-5 py-2 rounded-full bg-[#1c2c26] text-[#e5ff42] text-[14px] font-medium hover:bg-[#275f4b] disabled:opacity-30 disabled:pointer-events-none transition-all"
+          >
+            Join
+          </button>
+        </div>
+      </form>
+
+      {error && <p role="alert" className="mt-4 text-[14px] text-[#dc2626]">{error}</p>}
+    </div>
+  );
+}
+
 /* ---------------- Picker ---------------- */
 
 interface ModePickerProps {
@@ -283,35 +402,33 @@ interface ModePickerProps {
   onSettingsChange: (patch: Partial<GameSettings>) => void;
   availableCount: number;
   onStart: () => void;
+  duelError: string | null;
+  onCreateDuel: (settings: Pick<DuelConfig, 'mode' | 'continent' | 'order'>) => void;
+  onJoinDuel: (code: string) => void;
 }
 
-export default function ModePicker({ settings, onSettingsChange, availableCount, onStart }: ModePickerProps) {
-  const [openId, setOpenId] = useState<string | null>(null);
+export default function ModePicker({
+  settings,
+  onSettingsChange,
+  availableCount,
+  onStart,
+  duelError,
+  onCreateDuel,
+  onJoinDuel,
+}: ModePickerProps) {
+  const chip = useChipMenu();
+  const { setOpenId } = chip;
+  // Duel keeps its own setup, so selecting it leaves the solo settings alone
+  const [duelSelected, setDuelSelected] = useState(false);
   // Remember countries vs capitals while the player peeks at other modes
   const atlasTopic = useRef<GameMode>(settings.mode === 'capitals' ? 'capitals' : 'countries');
-  const mainMode = mainModeOf(settings.mode);
-
-  // Close an open chip on outside click or Escape
-  useEffect(() => {
-    if (!openId) return;
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target as Element).closest('[data-chip]')) setOpenId(null);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpenId(null);
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [openId]);
+  const mainMode = duelSelected ? 'duel' : mainModeOf(settings.mode);
 
   const selectMain = (id: MainMode) => {
     setOpenId(null);
-    onSettingsChange({ mode: id === 'flags' || id === 'blitz' ? id : atlasTopic.current });
+    setDuelSelected(id === 'duel');
+    if (id !== 'duel') onSettingsChange({ mode: id === 'flags' || id === 'blitz' ? id : atlasTopic.current });
   };
-
-  const chip = { openId, setOpenId };
 
   return (
     <MotionConfig reducedMotion="user">
@@ -326,18 +443,14 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
               </div>
               <div className="mt-auto pt-6 flex items-center justify-between text-[12px] uppercase tracking-[0.1em]">
                 <span className={selected ? 'text-[#e5ff42]' : 'text-[#275f4b]'}>{m.kicker}</span>
-                {m.soon ? (
-                  <span className="px-2.5 py-1 rounded-full border border-current/30 text-[11px]">Soon</span>
-                ) : (
-                  selected && (
-                    <motion.span
-                      layoutId="mode-selected"
-                      className="px-2.5 py-1 rounded-full bg-[#e5ff42] text-[#1c2c26] text-[11px]"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    >
-                      Selected
-                    </motion.span>
-                  )
+                {selected && (
+                  <motion.span
+                    layoutId="mode-selected"
+                    className="px-2.5 py-1 rounded-full bg-[#e5ff42] text-[#1c2c26] text-[11px]"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  >
+                    Selected
+                  </motion.span>
                 )}
               </div>
               <h3 className="font-serif text-[44px] leading-none tracking-[-0.02em] mt-2">{m.title}</h3>
@@ -347,15 +460,7 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
             </div>
           );
 
-          return m.soon ? (
-            <div
-              key={m.id}
-              aria-disabled
-              className="rounded-3xl border border-dashed border-[#1c2c26]/20 text-[#1c2c26]/45 select-none"
-            >
-              {body}
-            </div>
-          ) : (
+          return (
             <TiltCard key={m.id} selected={selected} onSelect={() => selectMain(m.id)}>
               {body}
             </TiltCard>
@@ -363,7 +468,10 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
         })}
       </div>
 
-      {/* Run setup, written as a sentence */}
+      {mainMode === 'duel' ? (
+        <DuelSetup chip={chip} error={duelError} onCreate={onCreateDuel} onJoin={onJoinDuel} />
+      ) : (
+      /* Run setup, written as a sentence */
       <div className="mt-5 rounded-3xl bg-white border border-[#1c2c26]/10 p-6 md:p-10 shadow-[0_30px_80px_-40px_rgba(28,44,38,0.45)]">
         <p className="text-[12px] uppercase tracking-[0.1em] text-[#628c7d] mb-4">Your run · tap a word to change it</p>
 
@@ -417,6 +525,7 @@ export default function ModePicker({ settings, onSettingsChange, availableCount,
           </button>
         </div>
       </div>
+      )}
     </MotionConfig>
   );
 }

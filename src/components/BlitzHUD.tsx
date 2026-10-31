@@ -20,6 +20,7 @@ interface BlitzHUDProps {
   onFound: (country: Country) => void;
   onFinish: () => void;
   onExit: () => void;
+  rival?: { score: number; left: boolean }; // Duel only
 }
 
 const formatTimer = (seconds: number) => {
@@ -43,6 +44,7 @@ export default function BlitzHUD({
   onFound,
   onFinish,
   onExit,
+  rival,
 }: BlitzHUDProps) {
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,16 +138,26 @@ export default function BlitzHUD({
           </span>
           <span className="font-light text-[#f5f5f1]/50">/ {countries.length}</span>
         </p>
-        {timed && (
-          <span
-            className={`flex items-center gap-1.5 pb-1 tabular-nums text-[15px] font-medium ${
-              timeLeft < 60 ? 'text-[#f87171] animate-pulse' : 'text-[#f5f5f1]'
-            }`}
-          >
-            <Timer className="w-4 h-4 opacity-70" />
-            {formatTimer(timeLeft)}
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-1 pb-1">
+          {rival && (
+            <span className="flex items-baseline gap-1.5 tabular-nums text-[13px] font-light text-[#f5f5f1]/50">
+              {rival.left ? 'Rival left' : 'Rival'}
+              <span key={rival.score} className="font-serif text-[22px] leading-none text-[#f5f5f1] animate-rise [animation-duration:0.3s]">
+                {rival.score}
+              </span>
+            </span>
+          )}
+          {timed && (
+            <span
+              className={`flex items-center gap-1.5 tabular-nums text-[15px] font-medium ${
+                timeLeft < 60 ? 'text-[#f87171] animate-pulse' : 'text-[#f5f5f1]'
+              }`}
+            >
+              <Timer className="w-4 h-4 opacity-70" />
+              {formatTimer(timeLeft)}
+            </span>
+          )}
+        </div>
       </div>
 
       {!reviewing && (

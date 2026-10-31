@@ -15,6 +15,9 @@ interface LandingProps {
   availableCount: number;
   worldCount: number;
   onStart: (patch?: Partial<GameSettings>) => void;
+  duelError: string | null;
+  onCreateDuel: React.ComponentProps<typeof ModePicker>['onCreateDuel'];
+  onJoinDuel: (code: string) => void;
 }
 
 // Noun + verb pairs, after Rainmaker's Software / Drone / Radar strip
@@ -29,7 +32,16 @@ const HEADLINE = ['Spot it.', 'Name it.', 'Know the world.'];
 // Deterministic sample (random here would break SSR hydration)
 const TICKER = COUNTRIES.filter((c, i) => c.continent !== 'Antarctica' && i % 4 === 0);
 
-export default function Landing({ settings, onSettingsChange, availableCount, worldCount, onStart }: LandingProps) {
+export default function Landing({
+  settings,
+  onSettingsChange,
+  availableCount,
+  worldCount,
+  onStart,
+  duelError,
+  onCreateDuel,
+  onJoinDuel,
+}: LandingProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -192,6 +204,9 @@ export default function Landing({ settings, onSettingsChange, availableCount, wo
               onSettingsChange={onSettingsChange}
               availableCount={availableCount}
               onStart={() => onStart()}
+              duelError={duelError}
+              onCreateDuel={onCreateDuel}
+              onJoinDuel={onJoinDuel}
             />
           </Reveal>
         </div>

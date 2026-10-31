@@ -5,7 +5,10 @@ import confetti from 'canvas-confetti';
 import { GameSettings, AnswerRecord } from '../types/game';
 import ArtDecoFrame from './ArtDecoFrame';
 import { formatSeed } from '../lib/game';
+import { DuelVerdict } from '../lib/useDuel';
 import { Trophy, RotateCcw, Share2, Eye, CheckCircle2, Flame, Award, Globe } from 'lucide-react';
+
+const VERDICT_TITLE: Record<DuelVerdict, string> = { win: 'You won the duel', lose: 'You lost the duel', draw: 'The duel is a draw' };
 
 interface GameOverModalProps {
   settings: GameSettings;
@@ -16,6 +19,7 @@ interface GameOverModalProps {
   timeSpentSeconds: number;
   onPlayAgain: () => void;
   onReviewAtlas: () => void;
+  duel?: { verdict: DuelVerdict | null; rivalScore: number; rivalLeft: boolean }; // Null verdict: rival still playing
 }
 
 export default function GameOverModal({
@@ -27,6 +31,7 @@ export default function GameOverModal({
   timeSpentSeconds,
   onPlayAgain,
   onReviewAtlas,
+  duel,
 }: GameOverModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -47,8 +52,10 @@ export default function GameOverModal({
   else if (coverage >= 0.6) rank = 'Master Navigator';
   else if (coverage >= 0.3) rank = 'World Explorer';
 
-  // Confetti trigger on mount
+  // Confetti trigger on mount (a duel only celebrates once it's won)
+  const noConfetti = !!duel && duel.verdict !== 'win';
   useEffect(() => {
+    if (noConfetti) return;
     try {
       confetti({
         particleCount: 100,
@@ -59,7 +66,7 @@ export default function GameOverModal({
     } catch (e) {
       // ignore
     }
-  }, []);
+  }, [noConfetti]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -73,7 +80,9 @@ export default function GameOverModal({
   const perMinute = timeSpentSeconds > 0 ? Math.round((correctCount / timeSpentSeconds) * 60) : 0;
 
   const handleShare = () => {
-    const text = isBlitz
+    const text = duel
+      ? `🌍 Earthle Duel!\nMode: ${settings.mode.toUpperCase()}\nScore: ${correctCount} vs ${duel.rivalScore}\nPlay at earthle.vercel.app`
+      : isBlitz
       ? `🌍 Earthle Blitz!\nFound: ${correctCount}/${totalCountries} in ${formatTime(timeSpentSeconds)}\nPace: ⚡ ${perMinute} per minute\nRun: #${formatSeed(runSeed)}\nRank: ${rank}\nPlay at earthle.vercel.app`
       : `🌍 Earthle Run Finished!\nMode: ${settings.mode.toUpperCase()} (${settings.inputType.toUpperCase()})\nScore: ${correctCount}/${totalCountries} (${accuracy}% accuracy)
 Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPlay at earthle.vercel.app`;
@@ -100,8 +109,14 @@ Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPla
             {rank}
           </p>
           <h2 className="text-2xl md:text-3xl font-serif italic text-[#f5f5f1]">
-            Expedition Complete
+            {!duel ? 'Expedition Complete' : duel.verdict ? VERDICT_TITLE[duel.verdict] : 'Waiting for your rival…'}
           </h2>
+          {duel && (
+            <p className="mt-2 text-sm font-mono text-[#f5f5f1]">
+              You <span className="text-[#e5ff42] font-bold">{correctCount}</span> : <span className="font-bold">{duel.rivalScore}</span> Rival
+              {duel.rivalLeft && <span className="text-[#628c7d]"> (left)</span>}
+            </p>
+          )}
           <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#628c7d] mt-1">
             Run #{formatSeed(runSeed)}
           </p>
@@ -150,7 +165,7 @@ Run: #${formatSeed(runSeed)}\nBest Streak: 🔥 ${maxStreak}\nRank: ${rank}\nPla
               className="w-full py-3.5 bg-[#e5ff42] text-[#1c2c26] font-mono font-bold text-xs uppercase tracking-wider hover:bg-[#d4ee38] flex items-center justify-center gap-2 transition-all shadow-lg"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Launch New Run</span>
+              <span>{duel ? 'Back to Menu' : 'Launch New Run'}</span>
             </button>
 
             <div className="grid grid-cols-2 gap-2.5">

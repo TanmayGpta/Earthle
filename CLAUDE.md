@@ -2,7 +2,7 @@
 
 # Earthle
 
-Geography quiz website: a country lights up on a 3D globe, the player names it (or its capital). Single-page Next.js app, all client-side, no backend.
+Geography quiz website: a country lights up on a 3D globe, the player names it (or its capital). Single-page Next.js app, all client-side, no backend (Duel links two browsers peer-to-peer with PeerJS, see `src/lib/useDuel.ts`).
 
 ## Stack
 - Next.js 16.4 (App Router, Turbopack) + React 19 + TypeScript. Next APIs differ from training data — check `node_modules/next/dist/docs/` before using framework APIs.

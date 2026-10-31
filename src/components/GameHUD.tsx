@@ -24,6 +24,7 @@ interface GameHUDProps {
   onReveal: () => void;
   onConfirmNext: () => void;
   onExit: () => void;
+  rival?: { score: number; left: boolean }; // Duel only
 }
 
 export default function GameHUD({
@@ -42,6 +43,7 @@ export default function GameHUD({
   onReveal,
   onConfirmNext,
   onExit,
+  rival,
 }: GameHUDProps) {
   const [typedInput, setTypedInput] = useState('');
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
@@ -51,7 +53,8 @@ export default function GameHUD({
   const lockedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const answeredCount = Object.values(answers).filter((a) => a.status !== 'skipped').length;
+  // In a duel the pill compares scores, so revealed answers don't count
+  const answeredCount = Object.values(answers).filter((a) => (rival ? a.status === 'correct' : a.status !== 'skipped')).length;
   const isFlags = settings.mode === 'flags';
 
   const prompt = {
@@ -208,6 +211,18 @@ export default function GameHUD({
             <span className="font-serif text-[19px] leading-none text-[#e5ff42]">{answeredCount}</span>
             <span className="font-light text-[#f5f5f1]/50">/ {totalCountries}</span>
           </div>
+
+          {rival && (
+            <>
+              <div className="w-px h-4 bg-[#daba89]/30" />
+              <div className="flex items-baseline gap-1.5 tabular-nums">
+                <span className="font-light text-[#f5f5f1]/50">{rival.left ? 'Rival left' : 'Rival'}</span>
+                <span key={rival.score} className="font-serif text-[19px] leading-none text-[#f5f5f1] animate-rise [animation-duration:0.3s]">
+                  {rival.score}
+                </span>
+              </div>
+            </>
+          )}
 
           {streak > 1 && (
             <>

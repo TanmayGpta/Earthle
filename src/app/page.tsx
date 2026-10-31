@@ -4,10 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
 import { getCountryPool, createRng, newSeed, shuffle } from '../lib/game';
+import { DUEL_SECONDS, DuelScore, duelVerdict, useDuel } from '../lib/useDuel';
 import GameHUD from '../components/GameHUD';
 import BlitzHUD from '../components/BlitzHUD';
 import GameOverModal from '../components/GameOverModal';
 import Landing from '../components/Landing';
+import DuelLobby, { DuelCountdown } from '../components/DuelLobby';
 
 // Dynamic import for 3D Globe components to prevent SSR issues
 const HeroGlobe = dynamic(() => import('../components/HeroGlobe'), { ssr: false });
@@ -40,6 +42,8 @@ export default function EarthleHome() {
   const [timeLeft, setTimeLeft] = useState(900);
   const [timeSpent, setTimeSpent] = useState(0);
   const [runSeed, setRunSeed] = useState(0);
+  // Set while in a duel: the clock counts down to this shared moment instead of ticking on its own
+  const [duelEndsAt, setDuelEndsAt] = useState<number | null>(null);
 
   // Hover & Trivia interaction
   const [hoveredCountry, setHoveredCountry] = useState<Country | null>(null);
@@ -81,12 +85,11 @@ export default function EarthleHome() {
   );
 
   // Start / Launch Game
-  const startGame = (customSettings?: Partial<GameSettings>) => {
+  const startGame = (customSettings?: Partial<GameSettings>, seed = newSeed()) => {
     const activeSettings = { ...settings, ...customSettings };
     setSettings(activeSettings);
 
-    // Fresh random seed every run; nothing is persisted
-    const seed = newSeed();
+    // Fresh random seed every run (a same-order duel shares one); nothing is persisted
     setRunSeed(seed);
     setCountryQueue(shuffle(getCountryPool(activeSettings), createRng(seed)));
     setCurrentCountryIndex(0);
@@ -102,6 +105,36 @@ export default function EarthleHome() {
     setRevealedCountry(null);
     setIsPlaying(true);
   };
+
+  // Both pressed Start: the board mounts behind the countdown so the clock starts on a ready globe
+  const duel = useDuel((config, startsAt) => {
+    setDuelEndsAt(startsAt + DUEL_SECONDS * 1000);
+    startGame(
+      { mode: config.mode, continent: config.continent, durationSeconds: DUEL_SECONDS },
+      config.order === 'same' ? config.seed : undefined
+    );
+  });
+  const { sendScore } = duel;
+  const inDuel = duelEndsAt !== null;
+
+  const myDuelScore = useMemo<DuelScore>(() => {
+    const correct = Object.values(answers).filter((a) => a.status === 'correct');
+    const startsAt = duel.state.startsAt ?? 0;
+    return {
+      score: correct.length,
+      lastCorrectMs: correct.length ? Math.max(...correct.map((a) => a.timestamp)) - startsAt : null,
+      finished: isGameOver || isReviewingAtlas,
+    };
+  }, [answers, isGameOver, isReviewingAtlas, duel.state.startsAt]);
+
+  // Keep the rival's top bar live
+  useEffect(() => {
+    if (inDuel) sendScore(myDuelScore);
+  }, [inDuel, myDuelScore, sendScore]);
+
+  const rival = inDuel
+    ? { score: duel.state.rival.score, left: duel.state.rivalLeft && !duel.state.rival.finished }
+    : undefined;
 
   // Target Country
   const targetCountry = countryQueue[currentCountryIndex] || null;
@@ -132,6 +165,17 @@ export default function EarthleHome() {
     if (!isPlaying || isGameOver || isReviewingAtlas) return;
     const timed = settings.durationSeconds > 0; // 0 = unlimited zen mode
 
+    // Duels read the shared deadline, so a throttled background tab can't fall behind
+    if (duelEndsAt !== null) {
+      const timer = setInterval(() => {
+        const left = Math.min(DUEL_SECONDS, Math.max(0, Math.ceil((duelEndsAt - Date.now()) / 1000)));
+        setTimeLeft(left);
+        setTimeSpent(DUEL_SECONDS - left);
+        if (left === 0) setIsGameOver(true);
+      }, 250);
+      return () => clearInterval(timer);
+    }
+
     const timer = setInterval(() => {
       setTimeSpent((prev) => prev + 1);
       if (!timed) return;
@@ -146,7 +190,7 @@ export default function EarthleHome() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isPlaying, isGameOver, isReviewingAtlas, settings.durationSeconds]);
+  }, [isPlaying, isGameOver, isReviewingAtlas, settings.durationSeconds, duelEndsAt]);
 
   // Move to next country in queue or finish game
   const advanceToNext = () => {
@@ -248,6 +292,8 @@ export default function EarthleHome() {
     setIsPlaying(false);
     setIsGameOver(false);
     setIsReviewingAtlas(false);
+    setDuelEndsAt(null);
+    duel.leave();
   };
 
   return (
@@ -289,6 +335,7 @@ export default function EarthleHome() {
               onFound={handleBlitzFound}
               onFinish={() => setIsGameOver(true)}
               onExit={handleExit}
+              rival={rival}
             />
           )}
           {!isBlitz && targetCountry && !isGameOver && (
@@ -308,6 +355,7 @@ export default function EarthleHome() {
               onReveal={handleReveal}
               onConfirmNext={handleConfirmNext}
               onExit={handleExit}
+              rival={rival}
             />
           )}
 
@@ -320,13 +368,24 @@ export default function EarthleHome() {
               runSeed={runSeed}
               maxStreak={maxStreak}
               timeSpentSeconds={timeSpent}
-              onPlayAgain={() => startGame()}
+              onPlayAgain={() => (inDuel ? handleExit() : startGame())}
               onReviewAtlas={() => {
                 setIsGameOver(false);
                 setIsReviewingAtlas(true);
               }}
+              duel={
+                inDuel
+                  ? {
+                      verdict: duelVerdict(myDuelScore, duel.state.rival, duel.state.rivalLeft),
+                      rivalScore: duel.state.rival.score,
+                      rivalLeft: duel.state.rivalLeft && !duel.state.rival.finished,
+                    }
+                  : undefined
+              }
             />
           )}
+
+          {inDuel && duel.state.startsAt !== null && <DuelCountdown startsAt={duel.state.startsAt} />}
 
           {/* Review Mode Banner (Allows spinning globe to inspect answered world) */}
           {isReviewingAtlas && (
@@ -354,7 +413,19 @@ export default function EarthleHome() {
             availableCount={availableCountries.length}
             worldCount={getCountryPool({ mode: settings.mode, continent: 'all' }).length}
             onStart={startGame}
+            duelError={duel.state.error}
+            onCreateDuel={duel.create}
+            onJoinDuel={duel.join}
           />
+          {duel.state.phase !== 'idle' && (
+            <DuelLobby
+              duel={duel.state}
+              inputType={settings.inputType}
+              onInputChange={(inputType) => setSettings((s) => ({ ...s, inputType }))}
+              onReady={duel.setReady}
+              onLeave={duel.leave}
+            />
+          )}
         </div>
       )}
     </main>
