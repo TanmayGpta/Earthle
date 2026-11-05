@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Country, AnswerRecord } from '../types/game';
 import { COUNTRIES } from '../data/countries';
+import { US_STATES } from '../data/usStates';
 
 interface InteractiveGlobeProps {
   targetCountry: Country | null;
@@ -10,10 +11,11 @@ interface InteractiveGlobeProps {
   onCountryHover: (country: Country | null, coords?: { x: number; y: number }) => void;
   // false = only fly the camera to the target (flags mode: lighting it would give the answer away)
   highlightTarget?: boolean;
+  isUsStates?: boolean;
 }
 
-// Map of ADM0_A3 -> Country object for fast lookup
-const COUNTRY_MAP = new Map(COUNTRIES.map((c) => [c.code, c]));
+// Map of ADM0_A3 -> Country/State object for fast lookup
+const COUNTRY_MAP = new Map([...COUNTRIES, ...US_STATES].map((c) => [c.code, c]));
 
 const featCode = (feat: any): string => feat.properties.ADM0_A3 || feat.properties.ISO_A3;
 
@@ -22,9 +24,12 @@ export default function InteractiveGlobe({
   answers,
   onCountryHover,
   highlightTarget = true,
+  isUsStates = false,
 }: InteractiveGlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
+  const worldDataRef = useRef<any>(null);
+  const usStatesDataRef = useRef<any>(null);
 
   // Accessors read from refs so they always see the latest props
   const targetRef = useRef(targetCountry);
@@ -32,19 +37,30 @@ export default function InteractiveGlobe({
   const hoveredCodeRef = useRef<string | null>(null);
   const onHoverRef = useRef(onCountryHover);
   const highlightRef = useRef(highlightTarget);
+  const isUsStatesRef = useRef(isUsStates);
 
   // Code of the polygon to light up lime, if any
   const litCode = () => (highlightRef.current ? targetRef.current?.code : undefined);
 
-  // Sync refs before the other effects below run (effects run in declaration order)
+  // Sync refs before the other effects below run
   useEffect(() => {
     targetRef.current = targetCountry;
     highlightRef.current = highlightTarget;
     answersRef.current = answers;
     onHoverRef.current = onCountryHover;
+    isUsStatesRef.current = isUsStates;
   });
 
-  // Re-assign polygon accessors (new function identities force globe.gl to re-evaluate)
+  const getFeatures = (showUsStates: boolean) => {
+    if (!worldDataRef.current) return [];
+    if (showUsStates && usStatesDataRef.current) {
+      const worldMinusUsa = worldDataRef.current.features.filter((f: any) => featCode(f) !== 'USA');
+      return [...worldMinusUsa, ...usStatesDataRef.current.features];
+    }
+    return worldDataRef.current.features;
+  };
+
+  // Re-assign polygon accessors
   const refreshPolygons = () => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -64,7 +80,8 @@ export default function InteractiveGlobe({
         // 2. Answered status
         const record = answersRef.current[code];
         if (record?.status === 'correct') return '#10b981'; // Emerald
-        if (record?.status === 'revealed') return '#f87171'; // Coral
+        if (record?.status === 'revealed') return '#f87171'; // Coral / Red
+        if (record?.status === 'partial') return '#eab308'; // Yellow: state right, capital not
         if (record?.status === 'skipped') return '#fb923c'; // Amber
         // 3. Default land (slightly lifted when hovered)
         return code === hoveredCodeRef.current ? '#33574a' : '#274137';
@@ -75,12 +92,14 @@ export default function InteractiveGlobe({
         const record = answersRef.current[code];
         if (record?.status === 'correct') return 'rgba(16, 185, 129, 0.3)';
         if (record?.status === 'revealed') return 'rgba(248, 113, 113, 0.3)';
+        if (record?.status === 'partial') return 'rgba(234, 179, 8, 0.35)';
         if (record?.status === 'skipped') return 'rgba(251, 146, 60, 0.3)';
         return '#1a2c25';
       })
       .polygonStrokeColor((feat: any) => {
         const code = featCode(feat);
         if (code === hoveredCodeRef.current || code === litCode()) return '#ffffff';
+        if (code && code.startsWith('US-')) return 'rgba(245, 245, 241, 0.45)';
         return 'rgba(245, 245, 241, 0.25)';
       });
   };
@@ -99,13 +118,19 @@ export default function InteractiveGlobe({
     Promise.all([
       import('globe.gl'),
       fetch('/data/ne_110m.geojson').then((res) => res.json()),
+      fetch('/data/us_states.geojson').then((res) => res.json()),
     ])
-      .then(([GlobeModule, data]) => {
+      .then(([GlobeModule, worldData, usStatesData]) => {
         if (!isMounted || !containerRef.current) return;
+
+        worldDataRef.current = worldData;
+        usStatesDataRef.current = usStatesData;
 
         const Globe = GlobeModule.default;
         const container = containerRef.current;
         container.innerHTML = '';
+
+        const features = getFeatures(isUsStatesRef.current);
 
         const globe = new (Globe as any)(container)
           .width(container.clientWidth || window.innerWidth)
@@ -116,7 +141,7 @@ export default function InteractiveGlobe({
           .atmosphereColor('#628c7d')
           .atmosphereAltitude(0.2)
           .globeImageUrl('/img/earth-dark.jpg')
-          .polygonsData(data.features)
+          .polygonsData(features)
           .polygonsTransitionDuration(250)
           .onPolygonHover((feat: any) => {
             const code = feat ? featCode(feat) : null;
@@ -125,7 +150,7 @@ export default function InteractiveGlobe({
               refreshPolygons();
             }
 
-            // Only show the info card if the country has already been answered
+            // Only show the info card if the country/state has already been answered
             const country = code && answersRef.current[code] ? COUNTRY_MAP.get(code) : undefined;
             onHoverRef.current(country ?? null);
             container.style.cursor = code ? 'pointer' : 'grab';
@@ -133,9 +158,9 @@ export default function InteractiveGlobe({
 
         const controls = globe.controls();
         if (controls) {
-          controls.autoRotate = false; // User in control during game
+          controls.autoRotate = false;
           controls.enableZoom = true;
-          controls.minDistance = 120;
+          controls.minDistance = 100;
           controls.maxDistance = 450;
         }
 
@@ -167,14 +192,22 @@ export default function InteractiveGlobe({
     };
   }, []);
 
+  // Update polygons data when switching to/from US states mode
+  useEffect(() => {
+    if (!globeRef.current || !worldDataRef.current) return;
+    const features = getFeatures(isUsStates);
+    globeRef.current.polygonsData(features);
+    refreshPolygons();
+  }, [isUsStates]);
+
   // Update polygon colors and altitudes when targetCountry or answers change
   useEffect(() => {
     refreshPolygons();
   }, [targetCountry, answers]);
 
-  // Smooth camera swoop to new target country
+  // Smooth camera swoop to new target country/state
   useEffect(() => {
-    flyToTarget(1100); // 1.1s silky cinematic flight
+    flyToTarget(1100);
   }, [targetCountry]);
 
   return (

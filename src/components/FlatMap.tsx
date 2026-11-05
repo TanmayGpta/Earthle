@@ -37,6 +37,7 @@ const STATUS_FILL: Record<AnswerRecord['status'], string> = {
   correct: '#10b981',
   revealed: '#f87171',
   skipped: '#fb923c',
+  partial: '#eab308',
 };
 
 // Static world map with wheel/drag/pinch zoom. Same palette as the globe.

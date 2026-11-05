@@ -11,7 +11,7 @@ export interface Country {
   trivia: string;
 }
 
-export type GameMode = 'countries' | 'capitals' | 'flags' | 'blitz';
+export type GameMode = 'countries' | 'capitals' | 'flags' | 'blitz' | 'us_states';
 export type InputType = 'type' | 'mcq';
 export type GameStatus = 'landing' | 'playing' | 'gameover';
 
@@ -24,7 +24,7 @@ export interface GameSettings {
 
 export interface AnswerRecord {
   countryCode: string;
-  status: 'correct' | 'revealed' | 'skipped';
+  status: 'correct' | 'revealed' | 'skipped' | 'partial';
   attempts: number;
   timestamp: number;
 }

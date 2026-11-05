@@ -240,10 +240,10 @@ export default function EarthleHome() {
   };
 
   // Skip Country (marked skipped, moves to back of queue)
-  const handleSkip = () => {
+  const handleSkip = (isPartial = false) => {
     if (!targetCountry) return;
     setStreak(0);
-    recordAnswer(targetCountry.code, 'skipped');
+    recordAnswer(targetCountry.code, isPartial ? 'partial' : 'skipped');
 
     // Re-insert into queue at the end
     setCountryQueue((prev) => {
@@ -254,11 +254,11 @@ export default function EarthleHome() {
   };
 
   // Reveal Answer ("What's the answer?")
-  const handleReveal = () => {
+  const handleReveal = (isPartial = false) => {
     if (!targetCountry) return;
 
     setStreak(0);
-    recordAnswer(targetCountry.code, 'revealed');
+    recordAnswer(targetCountry.code, isPartial ? 'partial' : 'revealed');
 
     // Show the revealed country card so the player can actually learn what the country was!
     setRevealedCountry(targetCountry);
@@ -318,6 +318,7 @@ export default function EarthleHome() {
               targetCountry={targetCountry}
               answers={answers}
               onCountryHover={(country) => setHoveredCountry(country)}
+              isUsStates={settings.mode === 'us_states'}
             />
           )}
 

@@ -30,6 +30,7 @@ type Option<T> = { value: T; label: string };
 const TOPICS: Option<GameMode>[] = [
   { value: 'countries', label: 'countries' },
   { value: 'capitals', label: 'capitals' },
+  { value: 'us_states', label: 'US states & capitals' },
 ];
 export const REGIONS: Option<string>[] = [
   { value: 'all', label: 'the World' },
@@ -46,6 +47,7 @@ export const INPUTS: Option<InputType>[] = [
 export const DUEL_MODES: Option<GameMode>[] = [
   { value: 'countries', label: 'Atlas countries' },
   { value: 'capitals', label: 'Atlas capitals' },
+  { value: 'us_states', label: 'US states & capitals' },
   { value: 'flags', label: 'Flags' },
   { value: 'blitz', label: 'Blitz' },
 ];
@@ -498,12 +500,17 @@ export default function ModePicker({
                 }}
               />
             )}{' '}
-            of <Chip id="region" {...chip} value={settings.continent} options={REGIONS} onChange={(continent) => onSettingsChange({ continent })} />
-            {mainMode !== 'blitz' && (
+            {settings.mode !== 'us_states' && (
+              <>
+                {' '}of <Chip id="region" {...chip} value={settings.continent} options={REGIONS} onChange={(continent) => onSettingsChange({ continent })} />
+              </>
+            )}
+            {mainMode !== 'blitz' && settings.mode !== 'us_states' && (
               <>
                 {' '}by <Chip id="input" {...chip} value={settings.inputType} options={INPUTS} onChange={(inputType) => onSettingsChange({ inputType })} />
               </>
             )}
+            {settings.mode === 'us_states' && ' by typing state & capital'}
             ,{' '}
             <Chip id="clock" {...chip} value={settings.durationSeconds} options={CLOCKS} onChange={(durationSeconds) => onSettingsChange({ durationSeconds })} />.
           </motion.div>
@@ -512,7 +519,7 @@ export default function ModePicker({
         <div className="mt-8 pt-6 border-t border-[#1c2c26]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-[15px] font-light text-[#1c2c26]/60">
             <span className="font-serif text-[28px] text-[#1c2c26] align-middle mr-1">{availableCount}</span>
-            {mainMode === 'flags' ? 'flags' : settings.mode === 'capitals' ? 'capitals' : 'countries'} in this run
+            {mainMode === 'flags' ? 'flags' : settings.mode === 'capitals' ? 'capitals' : settings.mode === 'us_states' ? 'states' : 'countries'} in this run
           </p>
           <button
             onClick={onStart}

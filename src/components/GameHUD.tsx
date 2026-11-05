@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Country, GameSettings, AnswerRecord, ActiveTrivia } from '../types/game';
-import { answerFor, isCorrectAnswer, pickDistractors, shuffle } from '../lib/game';
+import { answerFor, isCorrectAnswer, isCorrectStateName, isCorrectStateCapital, pickDistractors, shuffle } from '../lib/game';
 import { motion } from 'motion/react';
 import DecoCard from './DecoCard';
 import Flag from './Flag';
-import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, ChevronRight, MapPin } from 'lucide-react';
+import { Timer, Flame, Eye, SkipForward, ArrowLeft, Lightbulb, X, CheckCircle2, ChevronRight, MapPin, Award, Check } from 'lucide-react';
 
 interface GameHUDProps {
   settings: GameSettings;
@@ -20,8 +20,8 @@ interface GameHUDProps {
   activeTrivia: ActiveTrivia | null;
   onDismissTrivia: () => void;
   onSubmitAnswer: (isCorrect: boolean) => void;
-  onSkip: () => void;
-  onReveal: () => void;
+  onSkip: (isPartial?: boolean) => void;
+  onReveal: (isPartial?: boolean) => void;
   onConfirmNext: () => void;
   onExit: () => void;
   rival?: { score: number; left: boolean }; // Duel only
@@ -46,52 +46,122 @@ export default function GameHUD({
   rival,
 }: GameHUDProps) {
   const [typedInput, setTypedInput] = useState('');
+  // Dual inputs for US States mode
+  const [typedState, setTypedState] = useState('');
+  const [typedCapital, setTypedCapital] = useState('');
+
   const [mcqOptions, setMcqOptions] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'wrong' | 'reveal'; message: string } | null>(null);
+  
   const inputRef = useRef<HTMLInputElement>(null);
+  const stateInputRef = useRef<HTMLInputElement>(null);
+  const capitalInputRef = useRef<HTMLInputElement>(null);
+
   // Blocks input while a wrong-MCQ answer is shown, so it can't be submitted twice
   const lockedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  const isUsStates = settings.mode === 'us_states';
+  // Derived from the typed text, so there is no stale state to fall out of sync
+  const stateCorrect = isUsStates && isCorrectStateName(targetCountry, typedState);
+  const capitalCorrect = isUsStates && isCorrectStateCapital(targetCountry, typedCapital);
+  const isFlags = settings.mode === 'flags';
+
   // In a duel the pill compares scores, so revealed answers don't count
   const answeredCount = Object.values(answers).filter((a) => (rival ? a.status === 'correct' : a.status !== 'skipped')).length;
-  const isFlags = settings.mode === 'flags';
 
   const prompt = {
     countries: { label: 'Name the glowing country', placeholder: 'Type the country…' },
     capitals: { label: 'Name the capital', placeholder: 'Type the capital…' },
     flags: { label: 'Name the flag', placeholder: 'Type the country…' },
-    blitz: { label: 'Name every country', placeholder: 'Type the country…' }, // Blitz renders BlitzHUD instead
+    blitz: { label: 'Name every country', placeholder: 'Type the country…' },
+    us_states: { label: 'US States Expedition', placeholder: '' },
   }[settings.mode];
 
   const later = (fn: () => void, ms: number) => {
     timeoutsRef.current.push(setTimeout(fn, ms));
   };
 
-  // Cancel pending feedback/submit timers on unmount (e.g. timer hits zero mid-feedback)
+  // Reset inputs when the target changes (adjust state during render, not in an effect)
+  const [inputsFor, setInputsFor] = useState(targetCountry.code);
+  if (inputsFor !== targetCountry.code) {
+    setInputsFor(targetCountry.code);
+    setTypedInput('');
+    setTypedState('');
+    setTypedCapital('');
+  }
+
+  // Cancel pending feedback/submit timers on unmount
   useEffect(() => () => timeoutsRef.current.forEach(clearTimeout), []);
 
   // Generate MCQ options when targetCountry changes
   useEffect(() => {
-    if (settings.inputType !== 'mcq') return;
-
     lockedRef.current = false;
+    if (settings.inputType !== 'mcq' || isUsStates) return;
+
     const correctAnswer = answerFor(targetCountry, settings.mode);
     const options = shuffle([correctAnswer, ...pickDistractors(targetCountry, settings.mode)]);
     setMcqOptions(options);
-  }, [targetCountry, settings.mode, settings.inputType]);
+  }, [targetCountry, settings.mode, settings.inputType, isUsStates]);
 
   // Focus input automatically
   useEffect(() => {
-    if (!revealedCountry && settings.inputType === 'type' && inputRef.current) {
-      inputRef.current.focus();
+    if (revealedCountry) return;
+    if (isUsStates) {
+      stateInputRef.current?.focus();
+    } else if (settings.inputType === 'type') {
+      inputRef.current?.focus();
     }
-  }, [targetCountry, revealedCountry, settings.inputType]);
+  }, [targetCountry, revealedCountry, isUsStates, settings.inputType]);
+
+  const handleUsStatesSubmit = () => {
+    if (lockedRef.current) return;
+    const sOk = stateCorrect;
+    const cOk = capitalCorrect;
+
+    if (sOk && cOk) {
+      setFeedback({ type: 'correct', message: `✓ Correct! ${targetCountry.name} · ${targetCountry.capital}` });
+      later(() => setFeedback(null), 1200);
+      lockedRef.current = true;
+      onSubmitAnswer(true);
+    } else if (sOk && !cOk) {
+      setFeedback({ type: 'reveal', message: `State correct! Now enter the capital.` });
+      later(() => setFeedback(null), 1400);
+      capitalInputRef.current?.focus();
+    } else if (!sOk && cOk) {
+      setFeedback({ type: 'reveal', message: `Capital correct! Now enter the state name.` });
+      later(() => setFeedback(null), 1400);
+      stateInputRef.current?.focus();
+    } else {
+      setFeedback({ type: 'wrong', message: `✕ Not quite, try again or skip!` });
+      later(() => setFeedback(null), 1200);
+    }
+  };
+
+  const handleSkipAction = () => {
+    if (lockedRef.current) return;
+    if (isUsStates) {
+      const isPartial = stateCorrect !== capitalCorrect;
+      onSkip(isPartial);
+    } else {
+      onSkip(false);
+    }
+  };
+
+  const handleRevealAction = () => {
+    if (lockedRef.current) return;
+    if (isUsStates) {
+      const isPartial = stateCorrect !== capitalCorrect;
+      onReveal(isPartial);
+    } else {
+      onReveal(false);
+    }
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If a country answer is currently revealed, Enter or Space advances
+      // If an answer is currently revealed, Enter or Space advances
       if (revealedCountry) {
         if (e.key === 'Enter' || e.code === 'Space') {
           e.preventDefault();
@@ -100,7 +170,19 @@ export default function GameHUD({
         return;
       }
 
-      // If typing in input box
+      // If in US states mode
+      if (isUsStates) {
+        const inInput =
+          document.activeElement === stateInputRef.current || document.activeElement === capitalInputRef.current;
+        // The inputs handle their own Enter
+        if (e.key === 'Enter' && !inInput) {
+          e.preventDefault();
+          handleUsStatesSubmit();
+        }
+        if (inInput || e.code !== 'Space') return;
+      }
+
+      // If typing in standard single input box
       if (document.activeElement === inputRef.current && settings.inputType === 'type') {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -120,15 +202,20 @@ export default function GameHUD({
       }
 
       // Space to skip
-      if (e.code === 'Space' && document.activeElement !== inputRef.current && !lockedRef.current) {
+      const isTyping =
+        document.activeElement === inputRef.current ||
+        document.activeElement === stateInputRef.current ||
+        document.activeElement === capitalInputRef.current;
+
+      if (e.code === 'Space' && !isTyping && !lockedRef.current) {
         e.preventDefault();
-        onSkip();
+        handleSkipAction();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }); // Re-bind each render so handlers never see stale props
+  });
 
   const handleTypeSubmit = (answer: string) => {
     if (isCorrectAnswer(targetCountry, settings.mode, answer)) {
@@ -157,7 +244,7 @@ export default function GameHUD({
       });
       later(() => {
         setFeedback(null);
-        onSubmitAnswer(false); // Fail moves to next
+        onSubmitAnswer(false);
       }, 1400);
     }
   };
@@ -169,9 +256,7 @@ export default function GameHUD({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Flags mode on desktop: cards live in a narrow left column beside the map panel
   const leftColumn = 'md:absolute md:left-5 md:top-1/2 md:-translate-y-1/2 md:w-[340px] md:max-w-none md:mx-0';
-
   const pill = 'bg-[#1c2c26]/90 backdrop-blur-md border border-[#daba89]/30 rounded-full shadow-xl';
 
   return (
@@ -189,7 +274,7 @@ export default function GameHUD({
             </span>
             Menu
           </button>
-                  </div>
+        </div>
 
         {/* Center Pill: Timer, Progress & Streak */}
         <div className={`${pill} pointer-events-auto flex items-center gap-3 md:gap-4 px-5 py-1.5 text-[13px]`}>
@@ -238,11 +323,11 @@ export default function GameHUD({
         {/* Right Info Indicator */}
         <div className="pointer-events-auto hidden md:flex items-center gap-2 justify-self-end text-[12px] uppercase tracking-[0.1em] text-[#daba89]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#e5ff42]" />
-          <span>{settings.continent === 'all' ? 'World atlas' : settings.continent}</span>
+          <span>{isUsStates ? '50 US States' : settings.continent === 'all' ? 'World atlas' : settings.continent}</span>
         </div>
       </div>
 
-      {/* Occasional Surprise Trivia Toast (Floats in top-right) */}
+      {/* Occasional Surprise Trivia Toast */}
       {activeTrivia && (
         <div key={activeTrivia.id} className="pointer-events-auto absolute top-20 right-4 md:right-6 max-w-sm animate-rise z-30">
           <DecoCard cornerSize={28} className="shadow-2xl">
@@ -270,14 +355,15 @@ export default function GameHUD({
         </div>
       )}
 
-      {/* Answered Country Hover Card (Atlas Exploration) */}
+      {/* Answered Country / State Hover Card */}
       {hoveredCountry && (() => {
         const status = answers[hoveredCountry.code]?.status || 'correct';
         const meta = {
           correct: { color: 'text-[#10b981]', label: 'Guessed correctly', Icon: CheckCircle2 },
+          partial: { color: 'text-[#eab308]', label: 'Partially correct', Icon: Award },
           revealed: { color: 'text-[#f87171]', label: 'Answer revealed', Icon: Eye },
           skipped: { color: 'text-[#fb923c]', label: 'Skipped', Icon: SkipForward },
-        }[status];
+        }[status] || { color: 'text-[#10b981]', label: 'Guessed correctly', Icon: CheckCircle2 };
 
         return (
           <div
@@ -291,13 +377,13 @@ export default function GameHUD({
                   <Flag country={hoveredCountry} className="h-9 w-auto rounded-[2px]" />
                   <div>
                     <p className="font-serif text-[24px] leading-tight">{hoveredCountry.name}</p>
-                    <p className="text-[13px] font-light text-[#f5f5f1]/60">{hoveredCountry.capital}</p>
+                    <p className="text-[13px] font-light text-[#f5f5f1]/60">Capital: {hoveredCountry.capital}</p>
                   </div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-[#daba89]/20 flex items-center justify-between text-[12px]">
                   <span className="flex items-center gap-1 text-[#daba89]">
                     <MapPin className="w-3.5 h-3.5" />
-                    {hoveredCountry.continent}
+                    {isUsStates ? 'United States' : hoveredCountry.continent}
                   </span>
                   <span className={`${meta.color} flex items-center gap-1`}>
                     <meta.Icon className="w-3.5 h-3.5" />
@@ -317,10 +403,12 @@ export default function GameHUD({
             <DecoCard cornerSize={48} className="shadow-2xl text-center">
               <div className="px-8 py-10">
                 <Flag country={revealedCountry} className="h-16 w-auto mx-auto mb-4 rounded-[3px] shadow-lg" />
-                <p className="text-[12px] uppercase tracking-[0.1em] text-[#daba89]">The answer was</p>
+                <p className="text-[12px] uppercase tracking-[0.1em] text-[#daba89]">
+                  {isUsStates ? 'The US State was' : 'The answer was'}
+                </p>
                 <h3 className="font-serif text-[44px] leading-[1.04] tracking-[-0.02em] mt-1">{revealedCountry.name}</h3>
-                <p className="mt-2 text-[15px] font-light text-[#f5f5f1]/60">
-                  {revealedCountry.capital} · {revealedCountry.continent}
+                <p className="mt-2 text-[15px] font-medium text-[#e5ff42]">
+                  Capital: {revealedCountry.capital}
                 </p>
                 {revealedCountry.trivia && (
                   <p className="mt-6 text-[14px] leading-[1.55] text-[#f5f5f1]/75 font-light text-left border-l-2 border-[#daba89]/50 pl-4">
@@ -331,7 +419,7 @@ export default function GameHUD({
                   onClick={onConfirmNext}
                   className="group mt-8 w-full flex items-center justify-center gap-2 pl-7 pr-2 py-2 rounded-full bg-[#e5ff42] text-[#1c2c26] text-[15px] font-medium hover:bg-[#d4ee38] transition-colors"
                 >
-                  <span className="flex-1 text-center">Next country</span>
+                  <span className="flex-1 text-center">{isUsStates ? 'Next state' : 'Next country'}</span>
                   <span className="text-[12px] text-[#1c2c26]/60 mr-2">Enter</span>
                   <span className="w-9 h-9 rounded-full bg-[#1c2c26] text-[#e5ff42] flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5">
                     <ChevronRight className="w-5 h-5" />
@@ -356,12 +444,12 @@ export default function GameHUD({
         ) : null}
       </div>
 
-      {/* Bottom Question Card (Hidden when an answer is actively revealed) */}
+      {/* Bottom Question Card */}
       {!revealedCountry && (
         <div className={`w-full max-w-lg mx-auto pointer-events-auto ${isFlags ? leftColumn : ''}`}>
           <DecoCard cornerSize={24} className="shadow-[0_30px_80px_-30px_rgba(0,0,0,0.8)]">
             <div className="px-4 py-4 md:px-5 flex flex-col items-center gap-3">
-              {/* Flags mode: the flag swings in on a 3D hinge each round */}
+              {/* Flags mode banner */}
               {isFlags && (
                 <div className="pt-1 [perspective:900px]">
                   <motion.div
@@ -383,7 +471,9 @@ export default function GameHUD({
               <div className="text-center">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[#daba89] mb-0.5">{prompt.label}</p>
                 <h2 key={targetCountry.code} className="font-serif text-[20px] md:text-[24px] leading-[1.15] tracking-[-0.01em] animate-rise [animation-duration:0.5s]">
-                  {settings.mode === 'countries' ? (
+                  {isUsStates ? (
+                    'Which US State is this & what is its capital?'
+                  ) : settings.mode === 'countries' ? (
                     'Which country is this?'
                   ) : isFlags ? (
                     'Whose flag is this?'
@@ -395,7 +485,77 @@ export default function GameHUD({
                 </h2>
               </div>
 
-              {settings.inputType === 'type' ? (
+              {/* DUAL TEXT BOXES FOR US STATES */}
+              {isUsStates ? (
+                <div className="w-full flex flex-col gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Box 1: State Name */}
+                    <div className={`flex items-center rounded-full px-3 py-1.5 transition-all ${
+                      stateCorrect ? 'bg-[#10b981]/20 ring-2 ring-[#10b981]' : 'bg-[#f5f5f1] ring-2 ring-transparent focus-within:ring-[#e5ff42]'
+                    }`}>
+                      <input
+                        ref={stateInputRef}
+                        type="text"
+                        value={stateCorrect ? targetCountry.name : typedState}
+                        disabled={stateCorrect}
+                        onChange={(e) => {
+                          setTypedState(e.target.value);
+                          if (isCorrectStateName(targetCountry, e.target.value)) {
+                            capitalInputRef.current?.focus();
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (stateCorrect && !capitalCorrect) capitalInputRef.current?.focus();
+                            else handleUsStatesSubmit();
+                          }
+                        }}
+                        placeholder="State name…"
+                        className={`w-full bg-transparent px-2 text-[14px] focus:outline-none ${
+                          stateCorrect ? 'text-[#10b981] font-medium' : 'text-[#1c2c26] placeholder-[#1c2c26]/40'
+                        }`}
+                      />
+                      {stateCorrect && <Check className="w-4 h-4 text-[#10b981] shrink-0 mr-1" />}
+                    </div>
+
+                    {/* Box 2: State Capital */}
+                    <div className={`flex items-center rounded-full px-3 py-1.5 transition-all ${
+                      capitalCorrect ? 'bg-[#10b981]/20 ring-2 ring-[#10b981]' : 'bg-[#f5f5f1] ring-2 ring-transparent focus-within:ring-[#e5ff42]'
+                    }`}>
+                      <input
+                        ref={capitalInputRef}
+                        type="text"
+                        value={capitalCorrect ? targetCountry.capital : typedCapital}
+                        disabled={capitalCorrect}
+                        onChange={(e) => {
+                          setTypedCapital(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleUsStatesSubmit();
+                          }
+                        }}
+                        placeholder="Capital city…"
+                        className={`w-full bg-transparent px-2 text-[14px] focus:outline-none ${
+                          capitalCorrect ? 'text-[#10b981] font-medium' : 'text-[#1c2c26] placeholder-[#1c2c26]/40'
+                        }`}
+                      />
+                      {capitalCorrect && <Check className="w-4 h-4 text-[#10b981] shrink-0 mr-1" />}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleUsStatesSubmit}
+                    disabled={!typedState.trim() && !typedCapital.trim()}
+                    className="w-full py-2 rounded-full bg-[#1c2c26] text-[#e5ff42] text-[14px] font-medium hover:bg-[#275f4b] disabled:opacity-30 disabled:pointer-events-none transition-all"
+                  >
+                    Submit Both
+                  </button>
+                </div>
+              ) : settings.inputType === 'type' ? (
+                /* Standard single input box */
                 <div className="w-full flex items-center rounded-full bg-[#f5f5f1] p-1 ring-2 ring-transparent focus-within:ring-[#e5ff42] transition-all">
                   <input
                     ref={inputRef}
@@ -414,7 +574,7 @@ export default function GameHUD({
                   </button>
                 </div>
               ) : (
-                /* MCQ: light pills on the dark card for contrast */
+                /* MCQ options */
                 <div key={targetCountry.code} className={`w-full grid grid-cols-2 gap-2 ${isFlags ? 'md:grid-cols-1' : ''}`}>
                   {mcqOptions.map((option, index) => (
                     <button
@@ -432,10 +592,10 @@ export default function GameHUD({
                 </div>
               )}
 
-              {/* Skip & Reveal */}
+              {/* Skip & Reveal buttons */}
               <div className="flex items-center gap-1 -mb-1 text-[13px] font-light">
                 <button
-                  onClick={() => !lockedRef.current && onSkip()}
+                  onClick={handleSkipAction}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[#f5f5f1]/60 hover:text-[#f5f5f1] hover:bg-[#f5f5f1]/10 transition-all"
                 >
                   <SkipForward className="w-3.5 h-3.5" />
@@ -443,7 +603,7 @@ export default function GameHUD({
                 </button>
                 <span className="w-px h-4 bg-[#daba89]/30" />
                 <button
-                  onClick={() => !lockedRef.current && onReveal()}
+                  onClick={handleRevealAction}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[#f5f5f1]/60 hover:text-[#f87171] hover:bg-[#f87171]/10 transition-all"
                 >
                   <Eye className="w-3.5 h-3.5" />

@@ -1,5 +1,6 @@
 import { Country, GameMode, GameSettings } from '../types/game';
 import { COUNTRIES } from '../data/countries';
+import { US_STATES } from '../data/usStates';
 
 // Accepted alternate spellings for capitals, keyed by country code
 const CAPITAL_ALIASES: Record<string, string[]> = {
@@ -65,6 +66,25 @@ export const isCorrectAnswer = (country: Country, mode: GameMode, input: string)
   return false;
 };
 
+// Full names and aliases only. No "north"/"south" shorthand, and 2-letter postal codes are skipped
+// because the HUD autofills on a live match ("al" would lock in before "alaska").
+export const isCorrectStateName = (state: Country, input: string) => {
+  const query = normalize(input);
+  if (!query) return false;
+  const compactQuery = compact(input);
+  return [state.name, ...state.aliases]
+    .filter((a) => a.length > 2)
+    .some((a) => normalize(a) === query || compact(a) === compactQuery);
+};
+
+export const isCorrectStateCapital = (state: Country, input: string) => {
+  const query = normalize(input);
+  if (!query) return false;
+  const compactQuery = compact(input);
+  const accepted = [state.capital];
+  return accepted.some((a) => normalize(a) === query || compact(a) === compactQuery);
+};
+
 // Blitz matches on every keystroke, so only whole names count (shorthand would fire on "united").
 // `waiting` holds a match back while the input could still become a longer name: "niger" -> "nigeria",
 // "us" -> "usa". The player presses Enter to lock it in.
@@ -101,7 +121,9 @@ const SHARED_FLAGS = new Set(['CYN', 'SOL']);
 
 // Countries playable under the given settings
 export const getCountryPool = (settings: Pick<GameSettings, 'mode' | 'continent'>) =>
-  COUNTRIES.filter(
+  settings.mode === 'us_states'
+    ? US_STATES
+    : COUNTRIES.filter(
     (c) =>
       c.continent !== 'Antarctica' &&
       (settings.mode !== 'capitals' || c.capital !== 'None') &&

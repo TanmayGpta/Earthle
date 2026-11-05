@@ -39,10 +39,11 @@ export default function GameOverModal({
   const correctCount = answerList.filter((a) => a.status === 'correct').length;
   const revealedCount = answerList.filter((a) => a.status === 'revealed').length;
   const skippedCount = answerList.filter((a) => a.status === 'skipped').length;
+  const partialCount = answerList.filter((a) => a.status === 'partial').length;
   // Skipped countries were never actually answered
-  const totalAttempted = correctCount + revealedCount;
+  const totalAttempted = correctCount + partialCount + revealedCount;
 
-  const accuracy = totalAttempted > 0 ? Math.round((correctCount / totalAttempted) * 100) : 0;
+  const accuracy = totalAttempted > 0 ? Math.round(((correctCount + partialCount * 0.5) / totalAttempted) * 100) : 0;
   // Rank on share of the whole pool mastered, so quitting early can't earn a top title
   const coverage = totalCountries > 0 ? correctCount / totalCountries : 0;
 
